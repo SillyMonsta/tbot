@@ -21,7 +21,7 @@ from tinkoff.invest import (
 acc_name = 'Брокерский счёт'
 TOKEN = get_token_file.get_token('token.txt')
 
-
+print(TOKEN)
 def request_account_id():
     with Client(TOKEN) as client:
         try:
