@@ -41,7 +41,7 @@ def create_balances():
 def create_shares():
     cursor.execute("CREATE TABLE shares (figi VARCHAR(50), ticker VARCHAR(50),"
                    "lot INT, currency VARCHAR(50), instrument_name VARCHAR(50),"
-                   "sector TEXT, trading_status INT, min_price_increment FLOAT,"
+                   "exchange VARCHAR(50), sector TEXT, trading_status INT, min_price_increment FLOAT,"
                    "uid VARCHAR(50))")
     cursor.execute("""CREATE UNIQUE INDEX shares_figi_idx ON public.shares USING btree (figi)""")
     return
