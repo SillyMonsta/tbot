@@ -36,9 +36,8 @@ def request_account_id():
 if sql2data.is_table_exist('acc_id') is False:
     sql2data.create__acc_id()
     request_account_id()
-    account_id = sql2data.acc_id_from_sql(acc_name)
-else:
-    account_id = sql2data.acc_id_from_sql(acc_name)
+
+account_id = sql2data.acc_id_from_sql(acc_name)
 
 
 def adapt_date4interval(format_date, interval):
