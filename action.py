@@ -55,10 +55,6 @@ def prepare_stream_connection():
     # проверяем есть ли в базе данных таблица pid если нет, то создаем
     if sql2data.is_table_exist('pid') is False:
         sql2data.create_table_pid()
-    # проверяем есть ли в базе данных таблица acc_id если нет, то создаем, запрашиваем и заполняем
-    if sql2data.is_table_exist('acc_id') is False:
-        sql2data.create__acc_id()
-        requests.request_account_id()
     # проверяем есть ли в базе данных таблица shares если нет, то создаем, запрашиваем и заполняем
     if sql2data.is_table_exist('shares') is False:
         sql2data.create_shares()

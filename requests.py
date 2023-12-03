@@ -1,5 +1,4 @@
 import time
-import sys
 from decimal import Decimal
 import datetime
 import data2sql
@@ -21,7 +20,6 @@ from tinkoff.invest import (
 
 acc_name = 'Брокерский счёт'
 TOKEN = get_token_file.get_token('token.txt')
-account_id = sql2data.acc_id_from_sql(acc_name)
 
 
 def request_account_id():
@@ -32,6 +30,15 @@ def request_account_id():
             data2sql.account_id2sql(acc_id, acc_import_name)
         except InvestError as error:
             print(error)
+
+
+# проверяем есть ли в базе данных таблица acc_id если нет, то создаем, запрашиваем и заполняем
+if sql2data.is_table_exist('acc_id') is False:
+    sql2data.create__acc_id()
+    request_account_id()
+    account_id = sql2data.acc_id_from_sql(acc_name)
+else:
+    account_id = sql2data.acc_id_from_sql(acc_name)
 
 
 def adapt_date4interval(format_date, interval):
