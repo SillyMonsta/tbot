@@ -51,7 +51,7 @@ def shares2sql(shares_list):
                 sector = EXCLUDED.sector,
                 trading_status = EXCLUDED.trading_status,
                 min_price_increment = EXCLUDED.min_price_increment,
-                uid = EXCLUDED.uid,     
+                uid = EXCLUDED.uid
         """
     cursor.executemany(query, shares_list)
     connection.commit()
