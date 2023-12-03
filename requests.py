@@ -107,7 +107,7 @@ def request_history_candles(figi_list, history_candle_days, start_range, table_n
                         candles_list.append(one_row)
                 data2sql.history_candles2sql(table_name, candles_list)
         except InvestError as error:
-            print(error)
+            print('request history_candles', error)
     return
 
 
@@ -231,8 +231,6 @@ def get_order_request():
 
 
 def stream_connection(figi_list):
-    print('start new stream_connection', str(datetime.datetime.now())[:19])
-
     def request_iterator():
         for figi in figi_list:
             yield MarketDataRequest(
@@ -246,12 +244,8 @@ def stream_connection(figi_list):
     trades2candles_list = []
     with Client(TOKEN) as client:
         try:
-            for marketdata in client.market_data_stream.market_data_stream(request_iterator()):
-                # проверяем текущее время, если больше 19.00 выключаемся
-                if now().hour >= 16:
-                    print('time out range: close stream_connection', str(datetime.datetime.now())[:19])
-                    return
 
+            for marketdata in client.market_data_stream.market_data_stream(request_iterator()):
                 if marketdata.trade is not None:
                     price = units_nano_merge(marketdata.trade.price.units, marketdata.trade.price.nano)
                     # формируем данные для запроса sql по обновлению свечек для двух интервалов
@@ -268,7 +262,6 @@ def stream_connection(figi_list):
                             marketdata.trade.quantity,  # quantity для добавления к volume
                         )
                         trades2candles_list.append(one_row)
-
                     # если с предыдущей отправки прошло 3 секунды
                     if xtime + datetime.timedelta(seconds=3) < now():
                         # отправляем список трейдо-свечки, по которым была торговля за этот период
@@ -287,10 +280,7 @@ def stream_connection(figi_list):
                         trades2candles_list = []
 
         except Exception as e:
-            print('stream_connection error', e, str(datetime.datetime.now())[:19])
-            # проверяем текущее время, если больше 19.00 выключаемся
-            if now().hour >= 16:
-                print('time out range: close stream_connection', str(datetime.datetime.now())[:19])
-                return
-            time.sleep(1)
+            print('stream_connection error:', e, str(datetime.datetime.now())[:19])
+            figi_list = action.prepare_stream_connection()
+            time.sleep(10)
             stream_connection(figi_list)

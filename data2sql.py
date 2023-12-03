@@ -27,6 +27,17 @@ def account_id2sql(acc_id, acc_name):
     connection.commit()
 
 
+def update_pid(scrypt_name, connection_pid):
+    query = f"""
+            INSERT INTO pid (scrypt_name, pid)
+            VALUES (%s, %s)
+            ON CONFLICT(scrypt_name) DO UPDATE SET
+            pid = EXCLUDED.pid
+            """
+    cursor.execute(query, (scrypt_name, connection_pid))
+    connection.commit()
+
+
 def shares2sql(shares_list):
     query = f"""
         INSERT INTO shares (figi, ticker, lot, currency, instrument_name, exchange, sector, trading_status, min_price_increment, uid)

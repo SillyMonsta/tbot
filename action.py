@@ -3,6 +3,7 @@ import data2sql
 import sql2data
 from decimal import Decimal
 from finta import TA
+from tinkoff.invest.utils import now
 import pandas as pd
 import numpy
 import datetime
@@ -48,6 +49,51 @@ def check_last_event(figi, direction, case, x_price, x_time):
     else:
         return_data = True
     return return_data
+
+
+def prepare_stream_connection():
+    # проверяем есть ли в базе данных таблица pid если нет, то создаем
+    if sql2data.is_table_exist('pid') is False:
+        sql2data.create_table_pid()
+    # проверяем есть ли в базе данных таблица acc_id если нет, то создаем, запрашиваем и заполняем
+    if sql2data.is_table_exist('acc_id') is False:
+        sql2data.create__acc_id()
+        requests.request_account_id()
+    # проверяем есть ли в базе данных таблица shares если нет, то создаем, запрашиваем и заполняем
+    if sql2data.is_table_exist('shares') is False:
+        sql2data.create_shares()
+        requests.request_shares()
+    # проверяем есть ли в базе данных таблица balances если нет, то создаем
+    if sql2data.is_table_exist('balances') is False:
+        sql2data.create_balances()
+    # проверяем есть ли в базе данных таблица events_list если нет, то создаем
+    if sql2data.is_table_exist('events_list') is False:
+        sql2data.create_events_list()
+        # и сразу запускаем events_extraction, это может занять много часов
+        events_extraction()
+
+    # проверяем есть ли в базе данных таблица candles если нет, то создаем
+    if sql2data.is_table_exist('candles') is False:
+        sql2data.create_candles('candles')
+        history_candle_days = [0, 8, 240]
+    # если таблица candles есть, проверяем дату последней свечи в таблице, что-бы понять сколько нужно исторических свеч
+    else:
+        try:
+            date_last_candle = sql2data.get_last_candle('candles')[0][0]
+            days_from_last_candle = ((now() - datetime.datetime.fromisoformat(
+                str(date_last_candle))).total_seconds()) / 86400
+            history_candle_days = [0, days_from_last_candle, days_from_last_candle]
+        except IndexError:
+            history_candle_days = [0, 8, 240]
+
+    # формируем список всех акций
+    shares = sql2data.shares_from_sql()
+    figi_list = []
+    for figi_row in shares:
+        figi_list.append(figi_row[0])
+    requests.request_history_candles(figi_list, history_candle_days, 1, 'candles')
+    requests.request_balance()
+    return figi_list
 
 
 def update_last_candle(hi, lo, cl, vo, new_candles):
@@ -138,15 +184,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 dif_roc = 0
         except TypeError:
             dif_roc = 0
-
-        # bb = TA.BBANDS(ohlcv, 20)
-        # bbw = TA.BBWIDTH(ohlcv)
-        # last_bbw = bbw[len(bbw) - 1]
-        # kc = TA.KC(ohlcv)
-        # max_price = max(hi)
-        # min_price = min(lo)
-        # max_rsi = numpy.nanmax(rsi)
-        # min_rsi = numpy.nanmin(rsi)
 
         sell_strength = 0
         case = ''
@@ -304,15 +341,20 @@ def analyze_events():
 
 def events_extraction():
     date_start_events_extraction = datetime.datetime.now()
-    # глубина теста в днях 20 +3 дня для минутных, +8 дней для часовых, +240 дней дневных свечек в запросе
-    history_candle_days = [20 + 3, 20 + 8, 20 + 240]
+    # определяем глубину извлечения в днях +3 для минутных, +8 для часовых, +240 дневных
+    try:
+        date_last_ex_candle = sql2data.get_last_candle('candles_extraction')[0][0]
+        days_from_last_ex_candle = ((now() - datetime.datetime.fromisoformat(
+            str(date_last_ex_candle))).total_seconds()) / 86400
+        history_candle_days = [3, days_from_last_ex_candle+8, days_from_last_ex_candle+240]
+    except IndexError:
+        history_candle_days = [20 + 3, 20 + 8, 20 + 240]
     # достаём весь список акций (торгующихся на МОЭКС)
     shares = sql2data.shares_from_sql()
     # Запускаем тест для каждой из акций
     for figi_row in shares:
         figi = figi_row[0]
         ticker = figi_row[1]
-        # запускаем цикл теста от заданной даты в сторону возрастания, в качестве шага каждая минутная свеча
         requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
         # запрашиваем количество минутных свечей и отнимаем у них 60, точка старта тестирования
         figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1)
@@ -322,15 +364,14 @@ def events_extraction():
             x_time = figi_1m_candles[index][7]
             print('start events_extraction x_time:', x_time, ticker, figi, str(datetime.datetime.now())[:19])
         except IndexError:
-            print('error getting x_time: empty 1m_candles_list', datetime.datetime.now())
+            print(ticker, 'error getting x_time: empty 1m_candles_list', datetime.datetime.now())
             continue
-
-        while index > 0:
+        # запускаем цикл теста от заданной даты в сторону возрастания, в качестве шага каждая минутная свеча
+        for index_row1m in range(index, 0, -1):
             analyze_candles(figi, True, x_time, 'candles_extraction')
-            index = index - 1
-            x_time = figi_1m_candles[index][7]
+            x_time = figi_1m_candles[index_row1m][7]
 
-    print('finish events_extraction', str(datetime.datetime.now())[:19])
-    print('time spent events_extraction', datetime.datetime.now() - date_start_events_extraction)
+    print('events_extraction done', str(datetime.datetime.now())[:19],
+          '  time spent:', datetime.datetime.now() - date_start_events_extraction)
 
     return

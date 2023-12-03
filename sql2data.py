@@ -20,13 +20,21 @@ def is_table_exist(table_name):
     return result
 
 
+def create_table_pid():
+    cursor.execute("CREATE TABLE pid (scrypt_name VARCHAR(255), pid VARCHAR(8))")
+    cursor.execute("CREATE UNIQUE INDEX pid_scrypt_name_idx ON public.pid (scrypt_name)")
+    return
+
+
 def create__acc_id():
     cursor.execute("CREATE TABLE acc_id (acc_name VARCHAR(255), acc_id VARCHAR(255))")
+    cursor.execute("CREATE UNIQUE INDEX acc_id_pkey ON public.acc_id USING btree (acc_name)")
     return
 
 
 def create_balances():
     cursor.execute("CREATE TABLE balances (figi VARCHAR(255), quantity INT)")
+    cursor.execute("""CREATE UNIQUE INDEX balances_pkey ON public.balances USING btree (figi)""")
     return
 
 
@@ -35,6 +43,7 @@ def create_shares():
                    "lot INT, currency VARCHAR(50), instrument_name VARCHAR(50),"
                    "sector TEXT, trading_status INT, min_price_increment FLOAT,"
                    "uid VARCHAR(50))")
+    cursor.execute("""CREATE UNIQUE INDEX shares_figi_idx ON public.shares USING btree (figi)""")
     return
 
 
@@ -42,14 +51,18 @@ def create_candles(table_name):
     cursor.execute(f"CREATE TABLE {table_name} (figi VARCHAR(50), interval INT,"
                    f"open FLOAT4, high FLOAT4, low FLOAT4, close FLOAT4,"
                    f"volume INT, candle_time TIMESTAMPTZ)")
+    cursor.execute(f"""CREATE UNIQUE INDEX {table_name}_candle_time_idx ON public.{table_name} 
+                      USING btree (candle_time, figi, "interval")""")
     return
 
 
 def create_events_list():
-    cursor.execute("CREATE TABLE events_list (ticker VARCHAR(50), case TEXT, "
+    cursor.execute("CREATE TABLE events_list (ticker VARCHAR(50), event_case TEXT, "
                    "figi VARCHAR(50), direction VARCHAR(50), price NUMERIC,"
                    "ef NUMERIC, rsi NUMERIC, bbpb NUMERIC, price_position NUMERIC,"
                    "dif_roc NUMERIC, case_time TIMESTAMPTZ)")
+    cursor.execute("""CREATE UNIQUE INDEX events_list_figi_idx 
+                    ON public.events_list USING btree (figi, case_time, "event_case")""")
     return
 
 
