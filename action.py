@@ -347,7 +347,7 @@ def events_extraction():
         days_from_last_ex_candle = ((now() - datetime.datetime.fromisoformat(
             str(date_last_ex_candle))).total_seconds()) / 86400
         history_candle_days = [3, days_from_last_ex_candle+8, days_from_last_ex_candle+240]
-    except IndexError:
+    except Exception:
         history_candle_days = [20 + 3, 20 + 8, 20 + 240]
     # достаём весь список акций (торгующихся на МОЭКС)
     shares = sql2data.shares_from_sql()
