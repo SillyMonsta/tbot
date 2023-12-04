@@ -131,13 +131,25 @@ def get_last_event(table_name, figi):
     return result
 
 
-def get_last_candle(table_name):
+def get_last_candle_time(table_name):
     query = f'''SELECT *
             FROM (
                 SELECT candle_time FROM {table_name}
                 WHERE interval = 4
             ) subquery
             ORDER BY candle_time DESC LIMIT 1
+            '''
+    cursor.execute(query)
+    result = cursor.fetchall()
+    return result
+
+
+def get_last_time(table_name):
+    query = f'''SELECT *
+            FROM (
+                SELECT case_time FROM {table_name}
+            ) subquery
+            ORDER BY case_time DESC LIMIT 1
             '''
     cursor.execute(query)
     result = cursor.fetchall()

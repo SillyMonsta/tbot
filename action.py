@@ -66,11 +66,24 @@ def prepare_stream_connection():
     # проверяем есть ли в базе данных таблица balances если нет, то создаем
     if sql2data.is_table_exist('balances') is False:
         sql2data.create_balances()
+    # проверяем есть ли в базе данных таблица candles_extraction если нет, то создаем
+    if sql2data.is_table_exist('candles_extraction') is False:
+        sql2data.create_candles('candles_extraction')
     # проверяем есть ли в базе данных таблица events_list если нет, то создаем
     if sql2data.is_table_exist('events_list') is False:
         sql2data.create_events_list()
-        # и сразу запускаем events_extraction, это может занять много часов
-        events_extraction()
+    else:
+        # если таблица events_list есть, то определяем глубину извлечения по последнему эвенту в events_list
+        try:
+            date_last_event_time = sql2data.get_last_time('events_list')[0][0]
+            days_from_last_event = ((now() - datetime.datetime.fromisoformat(
+                str(date_last_event_time))).total_seconds()) / 86400
+            history_candle_days = [3, days_from_last_event+8, days_from_last_event+240]
+        # если таблица пуста, то запрашиваем на глубину 20 дней
+        except IndexError:
+            history_candle_days = [20 + 3, 20 + 8, 20 + 240]
+        # запускаем events_extraction
+        events_extraction(history_candle_days)
 
     # проверяем есть ли в базе данных таблица candles если нет, то создаем
     if sql2data.is_table_exist('candles') is False:
@@ -79,7 +92,7 @@ def prepare_stream_connection():
     # если таблица candles есть, проверяем дату последней свечи в таблице, что-бы понять сколько нужно исторических свеч
     else:
         try:
-            date_last_candle = sql2data.get_last_candle('candles')[0][0]
+            date_last_candle = sql2data.get_last_candle_time('candles')[0][0]
             days_from_last_candle = ((now() - datetime.datetime.fromisoformat(
                 str(date_last_candle))).total_seconds()) / 86400
             history_candle_days = [0, days_from_last_candle, days_from_last_candle]
@@ -339,16 +352,8 @@ def analyze_events():
     return
 
 
-def events_extraction():
+def events_extraction(history_candle_days):
     date_start_events_extraction = datetime.datetime.now()
-    # определяем глубину извлечения в днях +3 для минутных, +8 для часовых, +240 дневных
-    try:
-        date_last_ex_candle = sql2data.get_last_candle('candles_extraction')[0][0]
-        days_from_last_ex_candle = ((now() - datetime.datetime.fromisoformat(
-            str(date_last_ex_candle))).total_seconds()) / 86400
-        history_candle_days = [3, days_from_last_ex_candle+8, days_from_last_ex_candle+240]
-    except Exception:
-        history_candle_days = [20 + 3, 20 + 8, 20 + 240]
     # достаём весь список акций (торгующихся на МОЭКС)
     shares = sql2data.shares_from_sql()
     # Запускаем тест для каждой из акций
