@@ -3,14 +3,12 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import get_token_file
 
 con_conf = get_token_file.get_token('connection_config.txt').split()
-keepalive_kwargs = {
-    "keepalives": 1
-}
+
 connection = psycopg2.connect(database=con_conf[0],
                               user=con_conf[1],
                               password=con_conf[2],
                               host=con_conf[3],
-                              port=con_conf[4], **keepalive_kwargs)
+                              port=con_conf[4])
 connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 cursor = connection.cursor()
 
