@@ -3,11 +3,14 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import get_token_file
 
 con_conf = get_token_file.get_token('connection_config.txt').split()
+keepalive_kwargs = {
+    "keepalives": 1
+}
 connection = psycopg2.connect(database=con_conf[0],
                               user=con_conf[1],
                               password=con_conf[2],
                               host=con_conf[3],
-                              port=con_conf[4])
+                              port=con_conf[4], **keepalive_kwargs)
 connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 cursor = connection.cursor()
 
@@ -132,7 +135,17 @@ def operation_in_progress2sql(operation_list):
 
 
 def events_list2sql(events_list):
-    query = "INSERT INTO events_list VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    query = """
+    INSERT INTO events_list (ticker, event_case, figi, direction, price, ef, rsi, bbpb, price_position, dif_roc, case_time)
+        VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT(figi, case_time, event_case) DO UPDATE SET
+                price = EXCLUDED.price,
+                ef = EXCLUDED.ef,
+                rsi = EXCLUDED.rsi,
+                bbpb = EXCLUDED.bbpb,
+                price_position = EXCLUDED.price_position,
+                dif_roc = EXCLUDED.dif_roc
+                """
     cursor.executemany(query, events_list)
     connection.commit()
     return

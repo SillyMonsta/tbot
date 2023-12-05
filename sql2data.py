@@ -219,9 +219,9 @@ def get_info_by_figi(table_name, column_name, figi):
     return results
 
 
-def get_sorted_list_by_figi(table_name, column_name, figi):
-    query = f'''SELECT {column_name} FROM {table_name} WHERE figi = %s ORDER by case_time ASC'''
-    cursor.execute(query, (figi,))
+def get_sorted_list_by_figi(table_name, column_name, figi, time_start):
+    query = f'''SELECT {column_name} FROM {table_name} WHERE figi = %s AND case_time >= %s ORDER by case_time ASC'''
+    cursor.execute(query, (figi, time_start))
     results = cursor.fetchall()
     return results
 

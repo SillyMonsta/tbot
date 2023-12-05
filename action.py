@@ -289,9 +289,10 @@ def analyze_events():
     results = sql2data.distinct_figi_events()
     for result in results:
         figi = result[0]
-        directions_list = sql2data.get_sorted_list_by_figi('events_list', 'direction', figi)
-        price_list = sql2data.get_sorted_list_by_figi('events_list', 'price', figi)
-        case_time_list = sql2data.get_sorted_list_by_figi('events_list', 'case_time', figi)
+        time_start = now() - datetime.timedelta(days=20)
+        directions_list = sql2data.get_sorted_list_by_figi('events_list', 'direction', figi, time_start)
+        price_list = sql2data.get_sorted_list_by_figi('events_list', 'price', figi, time_start)
+        case_time_list = sql2data.get_sorted_list_by_figi('events_list', 'case_time', figi, time_start)
         prev_direction = directions_list[0][0]
         list_prices = []
         for di in range(0, len(directions_list)):
@@ -358,23 +359,27 @@ def events_extraction(history_candle_days):
     shares = sql2data.shares_from_sql()
     # Запускаем тест для каждой из акций
     for figi_row in shares:
-        figi = figi_row[0]
-        ticker = figi_row[1]
-        requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
-        # запрашиваем количество минутных свечей и отнимаем у них 60, точка старта тестирования
-        figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1)
-        index = len(figi_1m_candles) - 60
-        # через полученный индекс получаем время с которого начнем
         try:
-            x_time = figi_1m_candles[index][7]
-            print('start events_extraction x_time:', x_time, ticker, figi, str(datetime.datetime.now())[:19])
-        except IndexError:
-            print(ticker, 'error getting x_time: empty 1m_candles_list', datetime.datetime.now())
+            figi = figi_row[0]
+            ticker = figi_row[1]
+            requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
+            # запрашиваем количество минутных свечей и отнимаем у них 60, точка старта тестирования
+            figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1)
+            index = len(figi_1m_candles) - 60
+            # через полученный индекс получаем время с которого начнем
+            try:
+                x_time = figi_1m_candles[index][7]
+                print('start events_extraction x_time:', x_time, ticker, figi, str(datetime.datetime.now())[:19])
+            except IndexError:
+                print(ticker, 'error getting x_time: empty 1m_candles_list', datetime.datetime.now())
+                continue
+            # запускаем цикл теста от заданной даты в сторону возрастания, в качестве шага каждая минутная свеча
+            for index_row1m in range(index, 0, -1):
+                analyze_candles(figi, True, x_time, 'candles_extraction')
+                x_time = figi_1m_candles[index_row1m][7]
+        except Exception as e:
+            print(e)
             continue
-        # запускаем цикл теста от заданной даты в сторону возрастания, в качестве шага каждая минутная свеча
-        for index_row1m in range(index, 0, -1):
-            analyze_candles(figi, True, x_time, 'candles_extraction')
-            x_time = figi_1m_candles[index_row1m][7]
 
     print('events_extraction done', str(datetime.datetime.now())[:19],
           '  time spent:', datetime.datetime.now() - date_start_events_extraction)
