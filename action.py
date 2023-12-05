@@ -82,8 +82,8 @@ def prepare_stream_connection():
         # если таблица пуста, то запрашиваем на глубину 20 дней
         except IndexError:
             history_candle_days = [20 + 3, 20 + 8, 20 + 240]
-        # запускаем events_extraction
-        events_extraction(history_candle_days)
+    # запускаем events_extraction
+    events_extraction(history_candle_days)
 
     # проверяем есть ли в базе данных таблица candles если нет, то создаем
     if sql2data.is_table_exist('candles') is False:
