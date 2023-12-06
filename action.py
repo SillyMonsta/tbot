@@ -7,6 +7,7 @@ from tinkoff.invest.utils import now
 import pandas as pd
 import numpy
 import datetime
+from datetime import timedelta
 
 
 def get_price_position(figi, table_name):
@@ -72,18 +73,21 @@ def prepare_stream_connection():
     # проверяем есть ли в базе данных таблица events_list если нет, то создаем
     if sql2data.is_table_exist('events_list') is False:
         sql2data.create_events_list()
+        history_candle_days = [20 + 3, 20 + 8, 20 + 240]
+        date_last_event_time = now() - timedelta(days=20)
     else:
         # если таблица events_list есть, то определяем глубину извлечения по последнему эвенту в events_list
         try:
             date_last_event_time = sql2data.get_last_time('events_list')[0][0]
             days_from_last_event = ((now() - datetime.datetime.fromisoformat(
                 str(date_last_event_time))).total_seconds()) / 86400
-            history_candle_days = [3, days_from_last_event+8, days_from_last_event+240]
+            history_candle_days = [days_from_last_event, days_from_last_event, days_from_last_event]
         # если таблица пуста, то запрашиваем на глубину 20 дней
         except IndexError:
             history_candle_days = [20 + 3, 20 + 8, 20 + 240]
+            date_last_event_time = now() - timedelta(days=20)
     # запускаем events_extraction
-    events_extraction(history_candle_days)
+    events_extraction(history_candle_days, date_last_event_time)
 
     # проверяем есть ли в базе данных таблица candles если нет, то создаем
     if sql2data.is_table_exist('candles') is False:
@@ -220,9 +224,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                                     round(last_pb, 3), round(price_position, 3), round(dif_roc, 3),
                                     x_time.replace(microsecond=0)))
                 data2sql.events_list2sql(events_list)
-                print(share[1], case, 'SELL', cl[-1], round(last_ef), round(last_rsi),
-                      round(last_pb, 3), round(price_position, 3), round(dif_roc, 3),
-                      x_time.replace(microsecond=0))
+                print(share[1], case, 'SELL', cl[-1], x_time.replace(microsecond=0))
 
         buy_strength = 0
         if last_pb < 0:
@@ -245,9 +247,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                                     round(last_pb, 3), round(price_position, 3), round(dif_roc, 3),
                                     x_time.replace(microsecond=0)))
                 data2sql.events_list2sql(events_list)
-                print(share[1], case, 'BUY', cl[-1], round(last_ef), round(last_rsi),
-                      round(last_pb, 3), round(price_position, 3), round(dif_roc, 3),
-                      x_time.replace(microsecond=0))
+                print(share[1], case, 'BUY', cl[-1], x_time.replace(microsecond=0))
     return
 
 
@@ -353,7 +353,7 @@ def analyze_events():
     return
 
 
-def events_extraction(history_candle_days):
+def events_extraction(history_candle_days, time_from):
     date_start_events_extraction = datetime.datetime.now()
     # достаём весь список акций (торгующихся на МОЭКС)
     shares = sql2data.shares_from_sql()
@@ -364,8 +364,13 @@ def events_extraction(history_candle_days):
             ticker = figi_row[1]
             requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
             # запрашиваем количество минутных свечей и отнимаем у них 60, точка старта тестирования
-            figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1)
-            index = len(figi_1m_candles) - 60
+            figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1, time_from)
+            days_from_last_event = ((now() - datetime.datetime.fromisoformat(
+                str(time_from))).total_seconds()) / 86400
+            if days_from_last_event < 20:
+                index = len(figi_1m_candles)
+            else:
+                index = len(figi_1m_candles) - 60
             # через полученный индекс получаем время с которого начнем
             try:
                 x_time = figi_1m_candles[index][7]
