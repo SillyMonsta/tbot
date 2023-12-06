@@ -111,7 +111,7 @@ def get_all_by_figi_interval(table_name, figi, interval, time_from):
             SELECT * FROM {table_name} 
             WHERE figi = %s
             AND interval = %s
-            AND candle_time >= %s
+            AND candle_time > %s
             AND EXTRACT(DOW FROM candle_time) NOT IN (0, 6)
             AND EXTRACT(HOUR FROM candle_time) IN (7, 8, 9, 10, 11, 12, 13, 14, 15)
             ORDER BY candle_time DESC
