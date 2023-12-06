@@ -237,6 +237,8 @@ def get_order_request():
 
 
 def stream_connection(figi_list):
+    print('start stream_connection', str(datetime.datetime.now())[:19])
+
     def request_iterator():
         for figi in figi_list:
             yield MarketDataRequest(
