@@ -52,21 +52,7 @@ def check_last_event(figi, direction, case, x_price, x_time):
     return return_data
 
 
-def prepare_stream_connection():
-    # проверяем есть ли в базе данных таблица pid если нет, то создаем
-    if sql2data.is_table_exist('pid') is False:
-        sql2data.create_table_pid()
-    # проверяем есть ли в базе данных таблица acc_id если нет, то создаем, запрашиваем и заполняем
-    if sql2data.is_table_exist('acc_id') is False:
-        sql2data.create__acc_id()
-        requests.request_account_id()
-    # проверяем есть ли в базе данных таблица shares если нет, то создаем, запрашиваем и заполняем
-    if sql2data.is_table_exist('shares') is False:
-        sql2data.create_shares()
-        requests.request_shares()
-    # проверяем есть ли в базе данных таблица balances если нет, то создаем
-    if sql2data.is_table_exist('balances') is False:
-        sql2data.create_balances()
+def prepare_events_extraction():
     # проверяем есть ли в базе данных таблица candles_extraction если нет, то создаем
     if sql2data.is_table_exist('candles_extraction') is False:
         sql2data.create_candles('candles_extraction')
@@ -88,7 +74,24 @@ def prepare_stream_connection():
             date_last_event_time = now() - timedelta(days=20)
     # запускаем events_extraction
     events_extraction(history_candle_days, date_last_event_time)
+    return
 
+
+def prepare_stream_connection():
+    # проверяем есть ли в базе данных таблица pid если нет, то создаем
+    if sql2data.is_table_exist('pid') is False:
+        sql2data.create_table_pid()
+    # проверяем есть ли в базе данных таблица acc_id если нет, то создаем, запрашиваем и заполняем
+    if sql2data.is_table_exist('acc_id') is False:
+        sql2data.create__acc_id()
+        requests.request_account_id()
+    # проверяем есть ли в базе данных таблица shares если нет, то создаем, запрашиваем и заполняем
+    if sql2data.is_table_exist('shares') is False:
+        sql2data.create_shares()
+        requests.request_shares()
+    # проверяем есть ли в базе данных таблица balances если нет, то создаем
+    if sql2data.is_table_exist('balances') is False:
+        sql2data.create_balances()
     # проверяем есть ли в базе данных таблица candles если нет, то создаем
     if sql2data.is_table_exist('candles') is False:
         sql2data.create_candles('candles')
@@ -97,8 +100,14 @@ def prepare_stream_connection():
     else:
         try:
             date_last_candle = sql2data.get_last_candle_time('candles')[0][0]
-            days_from_last_candle = ((now() - datetime.datetime.fromisoformat(
-                str(date_last_candle))).total_seconds()) / 86400
+            seconds_from_last_candle = (now() - datetime.datetime.fromisoformat(str(date_last_candle))).total_seconds()
+            hours_from_last_candle = seconds_from_last_candle / 3600
+            # если 7 утра или понедельник и прошло 15 часов или 63 обнуляем days_from_last_candle
+            if (abs(hours_from_last_candle - 15) < 0.1 and int(now().hour) == 7)\
+                    or (abs(hours_from_last_candle - 63) < 0.1 and int(now().weekday()) == 0):
+                days_from_last_candle = 0
+            else:
+                days_from_last_candle = seconds_from_last_candle / 86400
             history_candle_days = [0, days_from_last_candle, days_from_last_candle]
         except IndexError:
             history_candle_days = [0, 8, 240]
@@ -108,7 +117,9 @@ def prepare_stream_connection():
     figi_list = []
     for figi_row in shares:
         figi_list.append(figi_row[0])
-    requests.request_history_candles(figi_list, history_candle_days, 1, 'candles')
+
+    if sum(history_candle_days):
+        requests.request_history_candles(figi_list, history_candle_days, 1, 'candles')
     requests.request_balance()
     return figi_list
 
