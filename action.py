@@ -149,7 +149,7 @@ def update_last_candle(hi, lo, cl, vo, new_candles):
 def analyze_candles(figi, events_extraction_case, x_time, table_name):
     candles = sql2data.candles_to_finta(figi, x_time, table_name)
     events_list = []
-
+    print(candles)
     op = []
     hi = []
     lo = []
