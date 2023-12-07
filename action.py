@@ -35,7 +35,6 @@ def check_last_event(figi, direction, case, x_price, x_time):
         case_time = x_time
         delta_last_case = case_time - last_case_time
         seconds_from_last_case = int(delta_last_case.total_seconds())
-        print('seconds_from_last_case =', seconds_from_last_case)
         if direction == 'BUY':
             price_difference_p = (last_event[0][4] - x_price) / last_event[0][4]
         else:
@@ -228,7 +227,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             case = case + ' difROC>1'
 
         if sell_strength >= 2:
-            print('sell_strength >= 2')
             if check_last_event(figi, 'SELL', case, last_price, x_time):
                 price_position = get_price_position(figi, table_name)
                 share = sql2data.get_info_by_figi('shares', '*', figi)[0]
@@ -252,7 +250,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             case = case + ' difROC<-1'
 
         if buy_strength >= 2:
-            print('buy_strength >= 2')
             if check_last_event(figi, 'BUY', case, last_price, x_time):
                 price_position = get_price_position(figi, table_name)
                 share = sql2data.get_info_by_figi('shares', '*', figi)[0]
