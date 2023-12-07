@@ -60,7 +60,7 @@ def create_events_list():
     cursor.execute("CREATE TABLE events_list (ticker VARCHAR(50), event_case TEXT, "
                    "figi VARCHAR(50), direction VARCHAR(50), price NUMERIC,"
                    "ef NUMERIC, rsi NUMERIC, bbpb NUMERIC, price_position NUMERIC,"
-                   "dif_roc NUMERIC, case_time TIMESTAMPTZ)")
+                   "dif_roc NUMERIC, event_time TIMESTAMPTZ)")
     cursor.execute("""CREATE UNIQUE INDEX events_list_figi_idx 
                     ON public.events_list USING btree (figi, case_time, "event_case")""")
     return
@@ -221,9 +221,17 @@ def get_info_by_figi(table_name, column_name, figi):
 
 
 def get_sorted_list_by_figi(table_name, column_name, figi, time_start):
-    query = f'''SELECT {column_name} FROM {table_name} WHERE figi = %s AND case_time >= %s ORDER by case_time ASC'''
+    print(time_start)
+    query = f'''
+            SELECT * FROM {table_name} 
+            WHERE figi = %s
+            AND event_time > %s
+            ORDER by case_time ASC
+            '''
+    #query = f'''SELECT {column_name} FROM {table_name} WHERE figi = %s ORDER by case_time ASC'''
     cursor.execute(query, (figi, time_start))
     results = cursor.fetchall()
+    print(results)
     return results
 
 
