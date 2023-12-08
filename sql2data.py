@@ -284,7 +284,7 @@ def distinct_figi_events():
 
 
 def all_from_events():
-    query = '''SELECT * FROM events_list ORDER BY case_time'''
+    query = '''SELECT * FROM events_list ORDER BY event_time'''
     cursor.execute(query, )
     results = cursor.fetchall()
     return results
