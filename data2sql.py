@@ -136,7 +136,7 @@ def events_list2sql(events_list):
     query = """
     INSERT INTO events_list (ticker, event_case, figi, direction, price, ef, rsi, bbpb, price_position, dif_roc, event_time)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT(figi, case_time, event_case) DO UPDATE SET
+        ON CONFLICT(figi, event_time, event_case) DO UPDATE SET
                 price = EXCLUDED.price,
                 ef = EXCLUDED.ef,
                 rsi = EXCLUDED.rsi,
