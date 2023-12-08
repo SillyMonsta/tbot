@@ -125,7 +125,7 @@ def get_last_event(table_name, figi):
     query = f'''
             SELECT * FROM {table_name} 
             WHERE figi = %s
-            ORDER BY case_time DESC LIMIT 1
+            ORDER BY event_time DESC LIMIT 1
             '''
     cursor.execute(query, (figi,))
     result = cursor.fetchall()
