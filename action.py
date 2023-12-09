@@ -380,32 +380,32 @@ def events_extraction(history_candle_days, time_from):
     shares = sql2data.shares_from_sql()
     # Запускаем тест для каждой из акций
     for figi_row in shares:
+        #try:
+        figi = figi_row[0]
+        ticker = figi_row[1]
+        requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
+        # запрашиваем количество минутных свечей и отнимаем у них 60, точка старта тестирования
+        figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1, time_from)
+        days_from_last_event = ((now() - datetime.datetime.fromisoformat(
+            str(time_from))).total_seconds()) / 86400
+        if days_from_last_event < 20:
+            index = len(figi_1m_candles) - 1
+        else:
+            index = len(figi_1m_candles) - 60
+        # через полученный индекс получаем время с которого начнем
         try:
-            figi = figi_row[0]
-            ticker = figi_row[1]
-            requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
-            # запрашиваем количество минутных свечей и отнимаем у них 60, точка старта тестирования
-            figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1, time_from)
-            days_from_last_event = ((now() - datetime.datetime.fromisoformat(
-                str(time_from))).total_seconds()) / 86400
-            if days_from_last_event < 20:
-                index = len(figi_1m_candles) - 1
-            else:
-                index = len(figi_1m_candles) - 60
-            # через полученный индекс получаем время с которого начнем
-            try:
-                x_time = figi_1m_candles[index][7]
-                print('start events_extraction x_time:', x_time, ticker, figi, str(datetime.datetime.now())[:19])
-            except IndexError:
-                print(ticker, 'error getting x_time: empty 1m_candles_list', datetime.datetime.now())
-                continue
-            # запускаем цикл теста от заданной даты в сторону возрастания, в качестве шага каждая минутная свеча
-            for index_row1m in range(index, 0, -1):
-                analyze_candles(figi, True, x_time, 'candles_extraction')
-                x_time = figi_1m_candles[index_row1m][7]
-        except Exception as e:
-            print(e)
+            x_time = figi_1m_candles[index][7]
+            print('start events_extraction x_time:', x_time, ticker, figi, str(datetime.datetime.now())[:19])
+        except IndexError:
+            print(ticker, 'error getting x_time: empty 1m_candles_list', datetime.datetime.now())
             continue
+        # запускаем цикл теста от заданной даты в сторону возрастания, в качестве шага каждая минутная свеча
+        for index_row1m in range(index, 0, -1):
+            analyze_candles(figi, True, x_time, 'candles_extraction')
+            x_time = figi_1m_candles[index_row1m][7]
+        #except Exception as e:
+        #    print(e)
+        #    continue
 
     print('events_extraction done', str(datetime.datetime.now())[:19],
           '  time spent:', datetime.datetime.now() - date_start_events_extraction)
