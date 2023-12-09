@@ -41,15 +41,15 @@ def create_balances():
 def create_shares():
     cursor.execute("CREATE TABLE shares (figi VARCHAR(50), ticker VARCHAR(50),"
                    "lot INT, currency VARCHAR(50), instrument_name VARCHAR(255),"
-                   "exchange VARCHAR(50), sector VARCHAR(255), trading_status INT, min_price_increment FLOAT,"
-                   "uid VARCHAR(255))")
+                   "exchange VARCHAR(50), sector VARCHAR(255), trading_status INT, min_price_increment NUMERIC,"
+                   "uid VARCHAR(255), pseudo_profit NUMERIC, time_in TIMESTAMPTZ, last_direction VARCHAR(5), deal_qnt INT)")
     cursor.execute("""CREATE UNIQUE INDEX shares_figi_idx ON public.shares USING btree (figi)""")
     return
 
 
 def create_candles(table_name):
     cursor.execute(f"CREATE TABLE {table_name} (figi VARCHAR(50), interval INT,"
-                   f"open FLOAT4, high FLOAT4, low FLOAT4, close FLOAT4,"
+                   f"open NUMERIC, high NUMERIC, low NUMERIC, close NUMERIC,"
                    f"volume INT, candle_time TIMESTAMPTZ)")
     cursor.execute(f"""CREATE UNIQUE INDEX {table_name}_candle_time_idx ON public.{table_name} 
                       USING btree (candle_time, figi, "interval")""")
@@ -76,14 +76,14 @@ def shares_from_sql():
     return results
 
 
-def get_figi_list_from_shares():
-    cursor.execute(
-        '''SELECT figi
-        FROM shares 
-        WHERE exchange LIKE 'MOEX%'
-        ORDER BY ticker''')
-    results = cursor.fetchall()
-    return results
+#def get_figi_list_from_shares():
+    #cursor.execute(
+    #    '''SELECT figi
+    #    FROM shares
+    #    WHERE exchange LIKE 'MOEX%'
+    #    ORDER BY ticker''')
+    #results = cursor.fetchall()
+    #return results
 
 
 def acc_id_from_sql(acc_name):
@@ -93,17 +93,17 @@ def acc_id_from_sql(acc_name):
     return results
 
 
-def num_rows_1m_from_sql(table_name, figi):
-    query = f'''
-            SELECT COUNT(*) FROM {table_name} 
-            WHERE figi = {figi}
-            AND interval = 1
-            AND EXTRACT(DOW FROM candle_time) NOT IN (0, 6)
-            AND EXTRACT(HOUR FROM candle_time) IN (7, 8, 9, 10, 11, 12, 13, 14, 15)
-            '''
-    cursor.execute(query)
-    results = cursor.fetchall()[0][0]
-    return results
+#def num_rows_1m_from_sql(table_name, figi):
+    #query = f'''
+    #        SELECT COUNT(*) FROM {table_name}
+    #        WHERE figi = {figi}
+    #        AND interval = 1
+    #        AND EXTRACT(DOW FROM candle_time) NOT IN (0, 6)
+    #        AND EXTRACT(HOUR FROM candle_time) IN (7, 8, 9, 10, 11, 12, 13, 14, 15)
+    #        '''
+    #cursor.execute(query)
+    #results = cursor.fetchall()[0][0]
+    #return results
 
 
 def get_all_by_figi_interval(table_name, figi, interval, time_from):
@@ -132,15 +132,29 @@ def get_last_event(table_name, figi):
     return result
 
 
-def get_last_candle_time(table_name):
+def get_last_candle_attribute(table_name, attribute):
     query = f'''SELECT *
             FROM (
-                SELECT candle_time FROM {table_name}
+                SELECT {attribute} FROM {table_name}
                 WHERE interval = 4
             ) subquery
             ORDER BY candle_time DESC LIMIT 1
             '''
     cursor.execute(query)
+    result = cursor.fetchall()
+    return result
+
+
+def get_last_price(figi):
+    query = f'''SELECT close
+            FROM (
+                SELECT * FROM candles
+                WHERE figi = %s
+                AND interval = 4
+            ) subquery
+            ORDER BY candle_time DESC LIMIT 1
+            '''
+    cursor.execute(query, (figi, ))
     result = cursor.fetchall()
     return result
 
@@ -176,23 +190,23 @@ def get_1min_candles(figi, minutes_qnt, from_data, table_name):
     return candles_1min
 
 
-def get_1hour_candles(figi, hours_qnt, from_data, table_name):
-    start_hours_time = from_data - timedelta(hours=hours_qnt)
-    end_hours_time = from_data
-    query_1hours = f'''
-                    SELECT *
-                    FROM (
-                        SELECT open, high, low, close, volume, candle_time FROM {table_name} 
-                        WHERE figi = %s 
-                        AND interval = 4
-                        AND candle_time >= %s
-                    ) subquery
-                    WHERE candle_time <= %s
-                    ORDER BY candle_time ASC
-                    '''
-    cursor.execute(query_1hours, (figi, start_hours_time, end_hours_time))
-    candles_1hour = cursor.fetchall()
-    return candles_1hour
+#def get_1hour_candles(figi, hours_qnt, from_data, table_name):
+    #start_hours_time = from_data - timedelta(hours=hours_qnt)
+    #end_hours_time = from_data
+    #query_1hours = f'''
+    #                SELECT *
+    #                FROM (
+    #                    SELECT open, high, low, close, volume, candle_time FROM {table_name}
+    #                    WHERE figi = %s
+    #                    AND interval = 4
+    #                    AND candle_time >= %s
+    #                ) subquery
+    #                WHERE candle_time <= %s
+    #                ORDER BY candle_time ASC
+    ##                '''
+    #cursor.execute(query_1hours, (figi, start_hours_time, end_hours_time))
+    #candles_1hour = cursor.fetchall()
+    #return candles_1hour
 
 
 def get_day_candles(figi, table_name):
@@ -234,15 +248,15 @@ def get_sorted_list_by_figi(table_name, column_name, figi, time_from):
     return results
 
 
-def get_time_duration(table_name, column_name, figi):
-    query = f'''SELECT (MAX({column_name}) - MIN({column_name})) AS duration 
-                FROM (
-                    SELECT {column_name} FROM {table_name} WHERE figi = s%
-                ) subquery
-                ORDER BY {column_name} ASC'''
-    cursor.execute(query, (figi,))
-    results = cursor.fetchall()
-    return results
+#def get_time_duration(table_name, column_name, figi):
+    #query = f'''SELECT (MAX({column_name}) - MIN({column_name})) AS duration
+    #            FROM (
+    #                SELECT {column_name} FROM {table_name} WHERE figi = s%
+    #            ) subquery
+    #            ORDER BY {column_name} ASC'''
+    #cursor.execute(query, (figi,))
+    #results = cursor.fetchall()
+    #return results
 
 
 def check_empty_table(table_name):

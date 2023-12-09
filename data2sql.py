@@ -41,8 +41,9 @@ def update_pid(scrypt_name, connection_pid):
 
 def shares2sql(shares_list):
     query = f"""
-        INSERT INTO shares (figi, ticker, lot, currency, instrument_name, exchange, sector, trading_status, min_price_increment, uid)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO shares (figi, ticker, lot, currency, instrument_name, exchange, sector, trading_status, 
+        min_price_increment, uid, pseudo_profit, time_in, last_direction, deal_qnt)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT(figi) DO UPDATE SET
                 ticker = EXCLUDED.ticker,
                 lot = EXCLUDED.lot,
@@ -55,6 +56,19 @@ def shares2sql(shares_list):
                 uid = EXCLUDED.uid
         """
     cursor.executemany(query, shares_list)
+    connection.commit()
+    return
+
+
+def analyze_events2shares2sql(pseudo_profit, time_in, last_direction, deal_qnt, figi):
+    query = '''UPDATE shares 
+                SET 
+                pseudo_profit = %s,
+                time_in = %s
+                last_direction = %s
+                deal_qnt = %s
+                WHERE figi = %s'''
+    cursor.execute(query, (pseudo_profit, time_in, last_direction, deal_qnt, figi))
     connection.commit()
     return
 
