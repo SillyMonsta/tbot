@@ -76,7 +76,7 @@ def request_shares():
                         units_nano_merge(share.min_price_increment.units, share.min_price_increment.nano),
                         share.uid,
                         0,
-                        '',
+                        now(),
                         '',
                         0
 
