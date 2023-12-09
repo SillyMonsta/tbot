@@ -360,7 +360,7 @@ def analyze_events(figi):
                     if last_direction == 'BUY':
                         average_profit = (last_price - list_prices[-1][1]) / last_price
                     if last_direction == 'SELL':
-                        average_profit = (list_prices[-1][1] - last_price) / float(list_prices[-1][1])
+                        average_profit = (list_prices[-1][1] - last_price) / list_prices[-1][1]
 
                 ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
 
