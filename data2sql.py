@@ -64,9 +64,9 @@ def analyze_events2shares2sql(pseudo_profit, time_in, last_direction, deal_qnt, 
     query = '''UPDATE shares 
                 SET 
                 pseudo_profit = %s,
-                time_in = %s
-                last_direction = %s
-                deal_qnt = %s
+                time_in = %s,
+                last_direction = %s,
+                deal_qnt = %s,
                 WHERE figi = %s'''
     cursor.execute(query, (pseudo_profit, time_in, last_direction, deal_qnt, figi))
     connection.commit()
