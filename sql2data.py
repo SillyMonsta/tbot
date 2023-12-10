@@ -93,6 +93,13 @@ def acc_id_from_sql(acc_name):
     return results
 
 
+def pid_from_sql(scrypt_name):
+    query = '''SELECT pid FROM pid WHERE scrypt_name = %s'''
+    cursor.execute(query, (scrypt_name,))
+    results = cursor.fetchall()[0][0]
+    return results
+
+
 #def num_rows_1m_from_sql(table_name, figi):
     #query = f'''
     #        SELECT COUNT(*) FROM {table_name}

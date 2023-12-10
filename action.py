@@ -235,8 +235,11 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                                     round(last_pb, 3), round(price_position, 3), round(dif_roc, 3),
                                     x_time.replace(microsecond=0)))
                 data2sql.events_list2sql(events_list)
-                analyze_events(figi)
-                print(share[1], case, 'SELL', cl[-1], x_time.replace(microsecond=0))
+                data_from_analyze_events = analyze_events(figi)
+                pseudo_profit = data_from_analyze_events[0]
+                deal_qnt = data_from_analyze_events[1]
+                print(share[1], case, 'SELL', cl[-1], x_time.replace(microsecond=0), pseudo_profit, deal_qnt)
+
 
         buy_strength = 0
         if last_pb < 0:
@@ -259,8 +262,11 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                                     round(last_pb, 3), round(price_position, 3), round(dif_roc, 3),
                                     x_time.replace(microsecond=0)))
                 data2sql.events_list2sql(events_list)
-                analyze_events(figi)
-                print(share[1], case, 'BUY', cl[-1], x_time.replace(microsecond=0))
+                data_from_analyze_events = analyze_events(figi)
+                pseudo_profit = data_from_analyze_events[0]
+                deal_qnt = data_from_analyze_events[1]
+                print(share[1], case, 'BUY', cl[-1], x_time.replace(microsecond=0), pseudo_profit, deal_qnt)
+
     return
 
 
@@ -303,7 +309,8 @@ def analyze_events(figi):
     directions_list = sql2data.get_sorted_list_by_figi('events_list', 'direction', figi, time_start)
     price_list = sql2data.get_sorted_list_by_figi('events_list', 'price', figi, time_start)
     case_time_list = sql2data.get_sorted_list_by_figi('events_list', 'event_time', figi, time_start)
-
+    pseudo_profit = 0
+    deal_qnt = 0
     if directions_list:
         prev_direction = directions_list[0][0]
         list_prices = []
@@ -318,8 +325,8 @@ def analyze_events(figi):
             prev_direction = direction
         else:
             prev_deal = ('', 0, '')
-            profit_currency_list = []
-            profit_share_list = []
+            profit_long_list = []
+            profit_short_list = []
             duration_long_deal_list = []
             duration_short_deal_list = []
             for deal in list_prices:
@@ -333,46 +340,48 @@ def analyze_events(figi):
                 # лонг
                 if deal_direction == 'SELL' and prev_deal_direction == 'BUY':
                     # delta = deal_time - prev_deal_time
-                    profit_currency_list.append(round((deal_price - prev_deal_price) / deal_price, 4))
+                    profit_long_list.append(round((deal_price - prev_deal_price) / deal_price, 4))
                     # duration_long_deal_list.append(delta.total_seconds() / 3600)
                 # шорт
                 if deal_direction == 'BUY' and prev_deal_direction == 'SELL':
                     # delta = deal_time - prev_deal_time
-                    profit_share_list.append(round((prev_deal_price - deal_price) / prev_deal_price, 4))
+                    profit_short_list.append(round((prev_deal_price - deal_price) / prev_deal_price, 4))
                     # duration_short_deal_list.append(delta.total_seconds() / 3600)
 
                 prev_deal = deal
             else:
-                deal_qnt = len(profit_share_list) + len(profit_currency_list)
+                deal_qnt = len(profit_short_list) + len(profit_long_list)
+                pseudo_profit_long = 0
+                pseudo_profit_short = 0
+                if profit_short_list:
+                    pseudo_profit_short = sum(profit_short_list) / len(profit_short_list)
+                if profit_long_list:
+                    pseudo_profit_long = sum(profit_long_list) / len(profit_long_list)
+                pseudo_profit = pseudo_profit_short + pseudo_profit_long
 
-                if profit_share_list and profit_currency_list:
-                    average_profit = sum(profit_share_list) / len(profit_share_list) + \
-                                     sum(profit_currency_list) / len(profit_currency_list)
-                else:
-                    average_profit = sum(profit_share_list + profit_currency_list)
+                #if len(list_prices):
+                #    last_direction = list_prices[-1][0]
+                #else:
+                #    last_direction = ''
 
-                if len(list_prices):
-                    last_direction = list_prices[-1][0]
-                else:
-                    last_direction = ''
+                #if list_prices[-1][1]:
+                #    last_price = sql2data.get_last_price(figi)[0][0]
+                #    if last_direction == 'BUY':
+                #        pseudo_profit = pseudo_profit + (last_price - list_prices[-1][1]) / last_price
+                #    if last_direction == 'SELL':
+                #        pseudo_profit = pseudo_profit + (list_prices[-1][1] - last_price) / list_prices[-1][1]
 
-                if list_prices[-1][1]:
-                    last_price = sql2data.get_last_price(figi)[0][0]
-                    if last_direction == 'BUY':
-                        average_profit = average_profit + (last_price - list_prices[-1][1]) / last_price
-                    if last_direction == 'SELL':
-                        average_profit = average_profit + (list_prices[-1][1] - last_price) / list_prices[-1][1]
+                #ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
 
-                ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
+                #data2sql.analyze_events2shares2sql(pseudo_profit, list_prices[0][2], last_direction, deal_qnt, figi)
+                #print(ticker,  # figi,
+                #      'pseudo_profit', pseudo_profit,
+                #      'time_in', list_prices[0][2],
+                #      'last_direction', last_direction,
+                #      'deal_qnt', deal_qnt)
+                #print()
 
-                data2sql.analyze_events2shares2sql(average_profit, list_prices[0][2], last_direction, deal_qnt, figi)
-                print(ticker,  # figi,
-                      'pseudo_profit', average_profit,
-                      'time_in', list_prices[0][2],
-                      'last_direction', last_direction,
-                      'deal_qnt', deal_qnt)
-                print()
-    return
+    return pseudo_profit, deal_qnt
 
 
 def events_extraction(history_candle_days, time_from):
@@ -381,9 +390,9 @@ def events_extraction(history_candle_days, time_from):
     shares = sql2data.shares_from_sql()
     # Запускаем тест для каждой из акций
     for figi_row in shares:
+        figi = figi_row[0]
+        ticker = figi_row[1]
         try:
-            figi = figi_row[0]
-            ticker = figi_row[1]
             requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
             # запрашиваем количество минутных свечей и отнимаем у них 60, точка старта тестирования
             figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1, time_from)
@@ -402,14 +411,14 @@ def events_extraction(history_candle_days, time_from):
             except IndexError:
                 print(
                     ticker,
-                    'error getting x_time: empty 1m_candles_list', datetime.datetime.now())
+                    'events_extraction error getting x_time: empty 1m_candles_list', datetime.datetime.now())
                 continue
             # запускаем цикл теста от заданной даты в сторону возрастания, в качестве шага каждая минутная свеча
             for index_row1m in range(index, 0, -1):
                 analyze_candles(figi, True, x_time, 'candles_extraction')
                 x_time = figi_1m_candles[index_row1m][7]
         except Exception as e:
-            print(e)
+            print('events_extraction error', e, datetime.datetime.now())
             continue
 
     print('events_extraction done', str(datetime.datetime.now())[:19],
