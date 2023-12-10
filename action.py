@@ -332,14 +332,14 @@ def analyze_events(figi):
 
                 # лонг
                 if deal_direction == 'SELL' and prev_deal_direction == 'BUY':
-                    delta = deal_time - prev_deal_time
+                    # delta = deal_time - prev_deal_time
                     profit_currency_list.append(round((deal_price - prev_deal_price) / deal_price, 4))
-                    duration_long_deal_list.append(delta.total_seconds() / 3600)
+                    # duration_long_deal_list.append(delta.total_seconds() / 3600)
                 # шорт
                 if deal_direction == 'BUY' and prev_deal_direction == 'SELL':
-                    delta = deal_time - prev_deal_time
+                    # delta = deal_time - prev_deal_time
                     profit_share_list.append(round((prev_deal_price - deal_price) / prev_deal_price, 4))
-                    duration_short_deal_list.append(delta.total_seconds() / 3600)
+                    # duration_short_deal_list.append(delta.total_seconds() / 3600)
 
                 prev_deal = deal
             else:
@@ -349,18 +349,19 @@ def analyze_events(figi):
                     average_profit = sum(profit_share_list) / len(profit_share_list) + \
                                      sum(profit_currency_list) / len(profit_currency_list)
                 else:
-                    average_profit = sum(profit_share_list + profit_share_list)
+                    average_profit = sum(profit_share_list + profit_currency_list)
 
                 if len(list_prices):
                     last_direction = list_prices[-1][0]
                 else:
                     last_direction = ''
-                if average_profit == 0 and list_prices[-1][1]:
+
+                if list_prices[-1][1]:
                     last_price = sql2data.get_last_price(figi)[0][0]
                     if last_direction == 'BUY':
-                        average_profit = (last_price - list_prices[-1][1]) / last_price
+                        average_profit = average_profit + (last_price - list_prices[-1][1]) / last_price
                     if last_direction == 'SELL':
-                        average_profit = (list_prices[-1][1] - last_price) / list_prices[-1][1]
+                        average_profit = average_profit + (list_prices[-1][1] - last_price) / list_prices[-1][1]
 
                 ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
 
@@ -380,40 +381,38 @@ def events_extraction(history_candle_days, time_from):
     shares = sql2data.shares_from_sql()
     # Запускаем тест для каждой из акций
     for figi_row in shares:
-        #try:
-        figi = figi_row[0]
-        ticker = figi_row[1]
-        requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
-        # запрашиваем количество минутных свечей и отнимаем у них 60, точка старта тестирования
-        figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1, time_from)
-        days_from_last_event = ((now() - datetime.datetime.fromisoformat(
-            str(time_from))).total_seconds()) / 86400
-        if days_from_last_event < 20:
-            index = len(figi_1m_candles) - 1
-        else:
-            index = len(figi_1m_candles) - 60
-        # через полученный индекс получаем время с которого начнем
         try:
-            x_time = figi_1m_candles[index][7]
-            print('start events_extraction x_time:', x_time, ticker, figi, str(datetime.datetime.now())[:19])
-        except IndexError:
-            print(ticker, 'error getting x_time: empty 1m_candles_list', datetime.datetime.now())
+            figi = figi_row[0]
+            ticker = figi_row[1]
+            requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
+            # запрашиваем количество минутных свечей и отнимаем у них 60, точка старта тестирования
+            figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1, time_from)
+            days_from_last_event = ((now() - datetime.datetime.fromisoformat(
+                str(time_from))).total_seconds()) / 86400
+            if days_from_last_event < 20:
+                index = len(figi_1m_candles) - 1
+            else:
+                index = len(figi_1m_candles) - 60
+            # через полученный индекс получаем время с которого начнем
+            try:
+                x_time = figi_1m_candles[index][7]
+                print('start events_extraction x_time:', x_time,
+                      ticker,
+                      figi, str(datetime.datetime.now())[:19])
+            except IndexError:
+                print(
+                    ticker,
+                    'error getting x_time: empty 1m_candles_list', datetime.datetime.now())
+                continue
+            # запускаем цикл теста от заданной даты в сторону возрастания, в качестве шага каждая минутная свеча
+            for index_row1m in range(index, 0, -1):
+                analyze_candles(figi, True, x_time, 'candles_extraction')
+                x_time = figi_1m_candles[index_row1m][7]
+        except Exception as e:
+            print(e)
             continue
-        # запускаем цикл теста от заданной даты в сторону возрастания, в качестве шага каждая минутная свеча
-        for index_row1m in range(index, 0, -1):
-            analyze_candles(figi, True, x_time, 'candles_extraction')
-            x_time = figi_1m_candles[index_row1m][7]
-        #except Exception as e:
-        #    print(e)
-        #    continue
 
     print('events_extraction done', str(datetime.datetime.now())[:19],
           '  time spent:', datetime.datetime.now() - date_start_events_extraction)
 
-    # запускаем анализ полученных эвентов
-    results = sql2data.distinct_figi_events()
-    for result in results:
-        figi = result[0]
-        analyze_events(figi)
-    print('analyze_events done, shares updated', str(datetime.datetime.now())[:19])
     return
