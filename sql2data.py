@@ -21,7 +21,7 @@ def is_table_exist(table_name):
 
 
 def create_table_pid():
-    cursor.execute("CREATE TABLE pid (scrypt_name VARCHAR(255), pid VARCHAR(8))")
+    cursor.execute("CREATE TABLE pid (scrypt_name VARCHAR(255), pid INT)")
     cursor.execute("CREATE UNIQUE INDEX pid_scrypt_name_idx ON public.pid (scrypt_name)")
     return
 
