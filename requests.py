@@ -5,6 +5,7 @@ import data2sql
 import sql2data
 import action
 import get_token_file
+import write2file
 from tinkoff.invest.exceptions import InvestError
 from tinkoff.invest.utils import now, decimal_to_quotation
 from tinkoff.invest import (
@@ -29,7 +30,8 @@ def request_account_id():
             acc_import_name = client.users.get_accounts().accounts[0].name
             data2sql.account_id2sql(acc_id, acc_import_name)
         except InvestError as error:
-            print(error)
+            write2file.write(str(datetime.datetime.now())[:19] + ' requests.py --> request_account_id --> InvestError: '
+                             + str(error), 'log.txt')
 
 
 # проверяем есть ли в базе данных таблица acc_id если нет, то создаем, запрашиваем и заполняем
@@ -57,7 +59,6 @@ def units_nano_merge(units, nano):
 
 
 def request_shares():
-    print('request shares', str(datetime.datetime.now())[:19])
     shares_list = []
     with Client(TOKEN) as client:
         try:
@@ -75,21 +76,17 @@ def request_shares():
                         share.trading_status,
                         units_nano_merge(share.min_price_increment.units, share.min_price_increment.nano),
                         share.uid,
-                        0,
-                        now(),
-                        '',
-                        0
-
                     )
                     shares_list.append(one_row)
             data2sql.shares2sql(shares_list)
         except InvestError as error:
-            print(error)
+            write2file.write(str(datetime.datetime.now())[:19] + ' requests.py --> request_shares --> InvestError: '
+                             + str(error), 'log.txt')
     return
 
 
 def request_history_candles(figi_list, history_candle_days, start_range, table_name):
-    print('request history_candles', str(datetime.datetime.now())[:19])
+    write2file.write(str(datetime.datetime.now())[:19] + ' request history_candles for ' + table_name, 'log.txt')
     interval_list = [1, 4, 5]
     history_candle_intervals = [CandleInterval.CANDLE_INTERVAL_1_MIN,
                                 CandleInterval.CANDLE_INTERVAL_HOUR,
@@ -118,7 +115,8 @@ def request_history_candles(figi_list, history_candle_days, start_range, table_n
                         candles_list.append(one_row)
                 data2sql.history_candles2sql(table_name, candles_list)
         except InvestError as error:
-            print('request history_candles', error)
+            write2file.write(str(datetime.datetime.now())[:19] + ' requests.py --> history_candles --> InvestError: '
+                             + str(error), 'log.txt')
     return
 
 
@@ -136,7 +134,8 @@ def request_balance():
                 securities_list.append(one_row_s)
             data2sql.securities2sql('balances', money_list + securities_list)
         except InvestError as error:
-            print(error)
+            write2file.write(str(datetime.datetime.now())[:19] + ' requests.py --> request_balance --> InvestError: '
+                             + str(error), 'log.txt')
     return
 
 
@@ -153,10 +152,11 @@ def limit_order(figi, direction, quantity, order_price):
                 order_type=OrderType.ORDER_TYPE_LIMIT,
                 order_id=order_id
             )
-            print(response)
-            print("order_id=", response.order_id)
+            write2file.write(str(datetime.datetime.now())[:19] + ' requests.py --> limit_order DONE: order_id='
+                             + str(response.order_id), 'log.txt')
         except InvestError as error:
-            print(error)
+            write2file.write(str(datetime.datetime.now())[:19] + ' requests.py --> limit_order --> InvestError: '
+                             + str(error), 'log.txt')
     return order_id
 
 
@@ -167,9 +167,11 @@ def cancel(order_id):
                 account_id=account_id,
                 order_id=order_id
             )
-            print(response)
+            write2file.write(str(datetime.datetime.now())[:19] + ' requests.py --> cancel DONE: '
+                             + str(response), 'log.txt')
         except InvestError as error:
-            print(error)
+            write2file.write(str(datetime.datetime.now())[:19] + ' requests.py --> cancel --> InvestError: '
+                             + str(error), 'log.txt')
     return
 
 
@@ -202,7 +204,8 @@ def operation_executed():
                     operation_list.append(one_row)
             data2sql.operation_executed2sql(operation_list)
         except InvestError as error:
-            print(error)
+            write2file.write(str(datetime.datetime.now())[:19] + ' requests.py --> operation_executed --> InvestError: '
+                             + str(error), 'log.txt')
     return
 
 
@@ -225,7 +228,9 @@ def operation_in_progress():
                     operation_list.append(one_row)
             data2sql.operation_in_progress2sql(operation_list)
         except InvestError as error:
-            print(error)
+            write2file.write(str(datetime.datetime.now())[:19] +
+                             ' requests.py --> operation_in_progress --> InvestError: '
+                             + str(error), 'log.txt')
     return
 
 
@@ -237,12 +242,14 @@ def get_order_request():
             orders = client.orders.get_orders(account_id=account_id)
 
         except InvestError as error:
-            print(error)
+            write2file.write(str(datetime.datetime.now())[:19] +
+                             ' requests.py --> get_order_request --> InvestError: '
+                             + str(error), 'log.txt')
     return orders.orders
 
 
 def stream_connection(figi_list):
-    print('start stream_connection', str(datetime.datetime.now())[:19])
+    write2file.write(str(datetime.datetime.now())[:19] + ' START stream_connection', 'log.txt')
 
     def request_iterator():
         for figi in figi_list:
@@ -293,7 +300,9 @@ def stream_connection(figi_list):
                         trades2candles_list = []
 
         except Exception as e:
-            print('stream_connection error:', e, str(datetime.datetime.now())[:19])
+            write2file.write(str(datetime.datetime.now())[:19] +
+                             ' requests.py --> stream_connection --> Exception: '
+                             + str(e), 'log.txt')
             figi_list = action.prepare_stream_connection()
             time.sleep(10)
             stream_connection(figi_list)

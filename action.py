@@ -8,7 +8,7 @@ import pandas as pd
 import numpy
 import datetime
 from datetime import timedelta
-import pytz
+import write2file
 
 
 def get_price_position(figi, table_name):
@@ -53,29 +53,27 @@ def check_last_event(figi, direction, case, x_price, x_time):
     return return_data
 
 
-def prepare_events_extraction():
-    # проверяем есть ли в базе данных таблица candles_extraction если нет, то создаем
-    if sql2data.is_table_exist('candles_extraction') is False:
-        sql2data.create_candles('candles_extraction')
-    # проверяем есть ли в базе данных таблица events_list если нет, то создаем
-    if sql2data.is_table_exist('events_list') is False:
-        sql2data.create_events_list()
-        history_candle_days = [20 + 3, 20 + 8, 20 + 240]
-        date_last_event_time = now() - timedelta(days=20)
+def update_last_candle(hi, lo, cl, vo, new_candles):
+    hi_new = []
+    lo_new = []
+    vo_new = []
+    for row in new_candles:
+        hi_new.append(row[1])
+        lo_new.append(row[2])
+        vo_new.append(row[4])
+    # вычисляем изменения свечки
     else:
-        # если таблица events_list есть, то определяем глубину извлечения по последнему эвенту в events_list
         try:
-            date_last_event_time = sql2data.get_last_time('events_list')[0][0]
-            days_from_last_event = ((now() - datetime.datetime.fromisoformat(
-                str(date_last_event_time))).total_seconds()) / 86400
-            history_candle_days = [days_from_last_event, days_from_last_event, days_from_last_event]
-        # если таблица пуста, то запрашиваем на глубину 20 дней
-        except IndexError:
-            history_candle_days = [20 + 3, 20 + 8, 20 + 240]
-            date_last_event_time = now() - timedelta(days=20)
-    # запускаем events_extraction
-    events_extraction(history_candle_days, date_last_event_time)
-    return
+            if max(hi_new) > hi:
+                hi = max(hi_new)
+            if min(lo_new) < lo:
+                lo = min(lo_new)
+            cl = new_candles[-1][3]
+            vo = vo + sum(vo_new)
+        except ValueError:
+            write2file.write(str(datetime.datetime.now())[:19] +
+                             ' action.py --> update_last_candle --> ValueError --> empty new_candles', 'log.txt')
+    return hi, lo, cl, vo
 
 
 def prepare_stream_connection():
@@ -123,28 +121,6 @@ def prepare_stream_connection():
         requests.request_history_candles(figi_list, history_candle_days, 1, 'candles')
     requests.request_balance()
     return figi_list
-
-
-def update_last_candle(hi, lo, cl, vo, new_candles):
-    hi_new = []
-    lo_new = []
-    vo_new = []
-    for row in new_candles:
-        hi_new.append(row[1])
-        lo_new.append(row[2])
-        vo_new.append(row[4])
-    # вычисляем изменения свечки
-    else:
-        try:
-            if max(hi_new) > hi:
-                hi = max(hi_new)
-            if min(lo_new) < lo:
-                lo = min(lo_new)
-            cl = new_candles[-1][3]
-            vo = vo + sum(vo_new)
-        except ValueError:
-            print('empty new_candles')
-    return hi, lo, cl, vo
 
 
 def analyze_candles(figi, events_extraction_case, x_time, table_name):
@@ -231,15 +207,19 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             if check_last_event(figi, 'SELL', case, last_price, x_time):
                 price_position = get_price_position(figi, table_name)
                 share = sql2data.get_info_by_figi('shares', '*', figi)[0]
+
                 events_list.append((share[1], case, figi, 'SELL', last_price, round(last_ef), round(last_rsi),
                                     round(last_pb, 3), round(price_position, 3), round(dif_roc, 3),
                                     x_time.replace(microsecond=0)))
                 data2sql.events_list2sql(events_list)
-                data_from_analyze_events = analyze_events(figi)
-                pseudo_profit = data_from_analyze_events[0]
-                deal_qnt = data_from_analyze_events[1]
-                print(share[1], case, 'SELL', cl[-1], x_time.replace(microsecond=0), pseudo_profit, deal_qnt)
-
+                ppl_pps_dq = analyze_events(figi)
+                pp_long = ppl_pps_dq[0]
+                pp_short = ppl_pps_dq[1]
+                deal_qnt = ppl_pps_dq[2]
+                data2sql.last_event_update2sql(pp_long, pp_short, deal_qnt)
+                write2file.write(str(x_time.replace(microsecond=0)) + ' ' +
+                                 str(share[1]) + ' ' + str(case) + ' SELL ' + str(cl[-1]) + ' '
+                                 + str(pp_long) + ' ' + str(pp_short) + ' ' + str(deal_qnt), 'log.txt')
 
         buy_strength = 0
         if last_pb < 0:
@@ -262,10 +242,14 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                                     round(last_pb, 3), round(price_position, 3), round(dif_roc, 3),
                                     x_time.replace(microsecond=0)))
                 data2sql.events_list2sql(events_list)
-                data_from_analyze_events = analyze_events(figi)
-                pseudo_profit = data_from_analyze_events[0]
-                deal_qnt = data_from_analyze_events[1]
-                print(share[1], case, 'BUY', cl[-1], x_time.replace(microsecond=0), pseudo_profit, deal_qnt)
+                ppl_pps_dq = analyze_events(figi)
+                pp_long = ppl_pps_dq[0]
+                pp_short = ppl_pps_dq[1]
+                deal_qnt = ppl_pps_dq[2]
+                data2sql.last_event_update2sql(pp_long, pp_short, deal_qnt)
+                write2file.write(str(x_time.replace(microsecond=0)) + ' ' +
+                                 str(share[1]) + ' ' + str(case) + ' BUY ' + str(cl[-1]) + ' '
+                                 + str(pp_long) + ' ' + str(pp_short) + ' ' + str(deal_qnt), 'log.txt')
 
     return
 
@@ -291,9 +275,6 @@ def analyze_sametime_cases():
             delta = date1 - date2
             dif_in_sec = delta.total_seconds()
 
-            if dif_in_sec < 60:
-                print(prev_ticker, prev_case_time, prev_direction, ticker, case_time, prev_direction, dif_in_sec)
-
         prev_case_time = case_time
         prev_ticker = ticker
         prev_direction = direction
@@ -309,8 +290,9 @@ def analyze_events(figi):
     directions_list = sql2data.get_sorted_list_by_figi('events_list', 'direction', figi, time_start)
     price_list = sql2data.get_sorted_list_by_figi('events_list', 'price', figi, time_start)
     case_time_list = sql2data.get_sorted_list_by_figi('events_list', 'event_time', figi, time_start)
-    pseudo_profit = 0
     deal_qnt = 0
+    pp_long = 0  # pseudo_profit_long
+    pp_short = 0  # pseudo_profit_short
     if directions_list:
         prev_direction = directions_list[0][0]
         list_prices = []
@@ -327,61 +309,54 @@ def analyze_events(figi):
             prev_deal = ('', 0, '')
             profit_long_list = []
             profit_short_list = []
-            duration_long_deal_list = []
-            duration_short_deal_list = []
             for deal in list_prices:
                 deal_direction = deal[0]
                 deal_price = deal[1]
-                deal_time = deal[2]
                 prev_deal_direction = prev_deal[0]
                 prev_deal_price = prev_deal[1]
-                prev_deal_time = prev_deal[2]
 
                 # лонг
                 if deal_direction == 'SELL' and prev_deal_direction == 'BUY':
-                    # delta = deal_time - prev_deal_time
                     profit_long_list.append(round((deal_price - prev_deal_price) / deal_price, 4))
-                    # duration_long_deal_list.append(delta.total_seconds() / 3600)
                 # шорт
                 if deal_direction == 'BUY' and prev_deal_direction == 'SELL':
-                    # delta = deal_time - prev_deal_time
                     profit_short_list.append(round((prev_deal_price - deal_price) / prev_deal_price, 4))
-                    # duration_short_deal_list.append(delta.total_seconds() / 3600)
 
                 prev_deal = deal
             else:
                 deal_qnt = len(profit_short_list) + len(profit_long_list)
-                pseudo_profit_long = 0
-                pseudo_profit_short = 0
+
                 if profit_short_list:
-                    pseudo_profit_short = sum(profit_short_list) / len(profit_short_list)
+                    pp_short = sum(profit_short_list) / len(profit_short_list)
                 if profit_long_list:
-                    pseudo_profit_long = sum(profit_long_list) / len(profit_long_list)
-                pseudo_profit = pseudo_profit_short + pseudo_profit_long
+                    pp_long = sum(profit_long_list) / len(profit_long_list)
 
-                #if len(list_prices):
-                #    last_direction = list_prices[-1][0]
-                #else:
-                #    last_direction = ''
+    return pp_long, pp_short, deal_qnt
 
-                #if list_prices[-1][1]:
-                #    last_price = sql2data.get_last_price(figi)[0][0]
-                #    if last_direction == 'BUY':
-                #        pseudo_profit = pseudo_profit + (last_price - list_prices[-1][1]) / last_price
-                #    if last_direction == 'SELL':
-                #        pseudo_profit = pseudo_profit + (list_prices[-1][1] - last_price) / list_prices[-1][1]
 
-                #ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
-
-                #data2sql.analyze_events2shares2sql(pseudo_profit, list_prices[0][2], last_direction, deal_qnt, figi)
-                #print(ticker,  # figi,
-                #      'pseudo_profit', pseudo_profit,
-                #      'time_in', list_prices[0][2],
-                #      'last_direction', last_direction,
-                #      'deal_qnt', deal_qnt)
-                #print()
-
-    return pseudo_profit, deal_qnt
+def prepare_events_extraction():
+    # проверяем есть ли в базе данных таблица candles_extraction если нет, то создаем
+    if sql2data.is_table_exist('candles_extraction') is False:
+        sql2data.create_candles('candles_extraction')
+    # проверяем есть ли в базе данных таблица events_list если нет, то создаем
+    if sql2data.is_table_exist('events_list') is False:
+        sql2data.create_events_list()
+        history_candle_days = [20 + 3, 20 + 8, 20 + 240]
+        date_last_event_time = now() - timedelta(days=20)
+    else:
+        # если таблица events_list есть, то определяем глубину извлечения по последнему эвенту в events_list
+        try:
+            date_last_event_time = sql2data.get_last_time('events_list')[0][0]
+            days_from_last_event = ((now() - datetime.datetime.fromisoformat(
+                str(date_last_event_time))).total_seconds()) / 86400
+            history_candle_days = [days_from_last_event, days_from_last_event, days_from_last_event]
+        # если таблица пуста, то запрашиваем на глубину 20 дней
+        except IndexError:
+            history_candle_days = [20 + 3, 20 + 8, 20 + 240]
+            date_last_event_time = now() - timedelta(days=20)
+    # запускаем events_extraction
+    events_extraction(history_candle_days, date_last_event_time)
+    return
 
 
 def events_extraction(history_candle_days, time_from):
@@ -405,23 +380,23 @@ def events_extraction(history_candle_days, time_from):
             # через полученный индекс получаем время с которого начнем
             try:
                 x_time = figi_1m_candles[index][7]
-                print('start events_extraction x_time:', x_time,
-                      ticker,
-                      figi, str(datetime.datetime.now())[:19])
+                write2file.write(str(datetime.datetime.now())[:19] +
+                                 ' start events_extraction for: ' + str(ticker) + str(x_time), 'log.txt')
+
             except IndexError:
-                print(
-                    ticker,
-                    'events_extraction error getting x_time: empty 1m_candles_list', datetime.datetime.now())
+                write2file.write(str(datetime.datetime.now())[:19] +
+                                 ' action.py --> events_extraction --> IndexError: empty 1m_candles_list '
+                                 + str(ticker), 'log.txt')
                 continue
             # запускаем цикл теста от заданной даты в сторону возрастания, в качестве шага каждая минутная свеча
             for index_row1m in range(index, 0, -1):
                 analyze_candles(figi, True, x_time, 'candles_extraction')
                 x_time = figi_1m_candles[index_row1m][7]
         except Exception as e:
-            print('events_extraction error', e, datetime.datetime.now())
+            write2file.write(str(datetime.datetime.now())[:19] +
+                             ' action.py --> events_extraction --> Exception: ' + str(e), 'log.txt')
             continue
-
-    print('events_extraction done', str(datetime.datetime.now())[:19],
-          '  time spent:', datetime.datetime.now() - date_start_events_extraction)
-
+    write2file.write(str(datetime.datetime.now())[:19] +
+                     ' events_extraction DONE  time spent: ' +
+                     str(datetime.datetime.now() - date_start_events_extraction), 'log.txt')
     return

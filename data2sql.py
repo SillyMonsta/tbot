@@ -42,8 +42,8 @@ def update_pid(scrypt_name, connection_pid):
 def shares2sql(shares_list):
     query = f"""
         INSERT INTO shares (figi, ticker, lot, currency, instrument_name, exchange, sector, trading_status, 
-        min_price_increment, uid, pseudo_profit, time_in, last_direction, deal_qnt)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        min_price_increment, uid)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT(figi) DO UPDATE SET
                 ticker = EXCLUDED.ticker,
                 lot = EXCLUDED.lot,
@@ -56,19 +56,6 @@ def shares2sql(shares_list):
                 uid = EXCLUDED.uid
         """
     cursor.executemany(query, shares_list)
-    connection.commit()
-    return
-
-
-def analyze_events2shares2sql(pseudo_profit, time_in, last_direction, deal_qnt, figi):
-    query = '''UPDATE shares 
-                SET 
-                pseudo_profit = %s,
-                time_in = %s,
-                last_direction = %s,
-                deal_qnt = %s
-                WHERE figi = %s'''
-    cursor.execute(query, (pseudo_profit, time_in, last_direction, deal_qnt, figi))
     connection.commit()
     return
 
@@ -148,16 +135,30 @@ def operation_in_progress2sql(operation_list):
 
 def events_list2sql(events_list):
     query = """
-    INSERT INTO events_list (ticker, event_case, figi, direction, price, ef, rsi, bbpb, price_position, dif_roc, event_time)
+    INSERT INTO events_list (ticker, event_case, figi, direction, price, pp_long, pp_short, deal_qnt, price_position, dif_roc, event_time)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT(figi, event_time, event_case) DO UPDATE SET
                 price = EXCLUDED.price,
-                ef = EXCLUDED.ef,
-                rsi = EXCLUDED.rsi,
-                bbpb = EXCLUDED.bbpb,
+                pp_long = EXCLUDED.pp_long,
+                pp_short = EXCLUDED.pp_short,
+                deal_qnt = EXCLUDED.deal_qnt,
                 price_position = EXCLUDED.price_position,
                 dif_roc = EXCLUDED.dif_roc
                 """
     cursor.executemany(query, events_list)
+    connection.commit()
+    return
+
+
+def last_event_update2sql(pp_long, pp_short, deal_qnt):
+    cursor.execute("SELECT MAX(event_time) FROM events_list")
+    max_event_time = cursor.fetchone()[0]
+    query = '''UPDATE events_list 
+                SET 
+                pp_long = %s,
+                pp_short = %s,
+                deal_qnt = %s
+                WHERE event_time = %s'''
+    cursor.execute(query, (pp_long, pp_short, deal_qnt, max_event_time))
     connection.commit()
     return
