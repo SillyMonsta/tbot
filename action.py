@@ -80,6 +80,7 @@ def prepare_stream_connection():
     # проверяем есть ли в базе данных таблица pid если нет, то создаем
     if sql2data.is_table_exist('pid') is False:
         sql2data.create_table_pid()
+        data2sql.update_pid('stream_connection', 0)
     # проверяем есть ли в базе данных таблица acc_id если нет, то создаем, запрашиваем и заполняем
     if sql2data.is_table_exist('acc_id') is False:
         sql2data.create__acc_id()
@@ -95,21 +96,27 @@ def prepare_stream_connection():
     if sql2data.is_table_exist('candles') is False:
         sql2data.create_candles('candles')
         history_candle_days = [0, 8, 240]
-    # если таблица candles есть, проверяем дату последней свечи в таблице, что-бы понять сколько нужно исторических свеч
+    # если таблица candles есть,
     else:
-        try:
-            date_last_candle = sql2data.get_last_candle_attribute('candles', 'candle_time')[0][0]
-            seconds_from_last_candle = (now() - datetime.datetime.fromisoformat(str(date_last_candle))).total_seconds()
-            hours_from_last_candle = seconds_from_last_candle / 3600
-            # если 7 утра или понедельник и прошло 15 часов или 63 обнуляем days_from_last_candle
-            if (abs(hours_from_last_candle - 15) < 0.1 and int(now().hour) == 7) \
-                    or (abs(hours_from_last_candle - 63) < 0.1 and int(now().weekday()) == 0):
-                days_from_last_candle = 0
-            else:
-                days_from_last_candle = seconds_from_last_candle / 86400
-            history_candle_days = [0, days_from_last_candle, days_from_last_candle]
-        except IndexError:
-            history_candle_days = [0, 8, 240]
+        # если пид не ноль значит остановка была нештатной, надо проверить свечи
+        if sql2data.pid_from_sql('stream_connection'):
+            try:
+                # проверяем дату последней свечи в таблице, что-бы понять сколько нужно исторических свеч
+                date_last_candle = sql2data.get_last_candle_attribute('candles', 'candle_time')[0][0]
+                seconds_from_last_candle = (now() - datetime.datetime.fromisoformat(str(date_last_candle))).total_seconds()
+                hours_from_last_candle = seconds_from_last_candle / 3600
+                # если 7 утра или понедельник и прошло 15 часов или 63 обнуляем days_from_last_candle
+                if (abs(hours_from_last_candle - 15) < 0.1 and int(now().hour) == 7) \
+                        or (abs(hours_from_last_candle - 63) < 0.1 and int(now().weekday()) == 0):
+                    days_from_last_candle = 0
+                else:
+                    days_from_last_candle = seconds_from_last_candle / 86400
+                history_candle_days = [0, days_from_last_candle, days_from_last_candle]
+            except IndexError:
+                history_candle_days = [0, 8, 240]
+        # если пид ноль значит стрим был остановлен штатно, свечи не проверяем
+        else:
+            history_candle_days = [0, 0, 0]
 
     # формируем список всех акций
     shares = sql2data.shares_from_sql()
@@ -217,9 +224,11 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 pp_short = ppl_pps_dq[1]
                 deal_qnt = ppl_pps_dq[2]
                 data2sql.last_event_update2sql(pp_long, pp_short, deal_qnt)
-                write2file.write(str(x_time.replace(microsecond=0)) + ' ' +
-                                 str(share[1]) + ' ' + str(case) + ' SELL ' + str(cl[-1]) + ' '
-                                 + str(pp_long) + ' ' + str(pp_short) + ' ' + str(deal_qnt), 'log.txt')
+                # отправляем в лог
+                write2file.write(str(datetime.datetime.now())[:19] + ' ' +
+                                 str(share[1]) + ' ' + str(case) + ' SELL ' + str(cl[-1]) + '  pp_long: ' +
+                                 str(pp_long) + '  pp_short: ' + str(pp_short) + '  deal_qnt:' +
+                                 str(deal_qnt) + '  dif_roc: ' + str(round(dif_roc, 3)), 'log.txt')
 
         buy_strength = 0
         if last_pb < 0:
@@ -247,9 +256,10 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 pp_short = ppl_pps_dq[1]
                 deal_qnt = ppl_pps_dq[2]
                 data2sql.last_event_update2sql(pp_long, pp_short, deal_qnt)
-                write2file.write(str(x_time.replace(microsecond=0)) + ' ' +
-                                 str(share[1]) + ' ' + str(case) + ' BUY ' + str(cl[-1]) + ' '
-                                 + str(pp_long) + ' ' + str(pp_short) + ' ' + str(deal_qnt), 'log.txt')
+                write2file.write(str(datetime.datetime.now())[:19] + ' ' +
+                                 str(share[1]) + ' ' + str(case) + ' BUY ' + str(cl[-1]) + '  pp_long: ' +
+                                 str(pp_long) + '  pp_short: ' + str(pp_short) + '  deal_qnt:' +
+                                 str(deal_qnt) + '  dif_roc: ' + str(round(dif_roc, 3)), 'log.txt')
 
     return
 
