@@ -226,9 +226,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 data2sql.last_event_update2sql(pp_long, pp_short, deal_qnt)
                 # отправляем в лог
                 write2file.write(str(datetime.datetime.now())[:19] + ' ' +
-                                 str(share[1]) + ' ' + str(case) + ' SELL ' + str(cl[-1]) + '  pp_long: ' +
-                                 str(pp_long) + '  pp_short: ' + str(pp_short) + '  deal_qnt:' +
-                                 str(deal_qnt) + '  dif_roc: ' + str(round(dif_roc, 3)), 'log.txt')
+                                 str(share[1]) + ' SELL:' + str(cl[-1]) + ' pp_l: ' +
+                                 str(round(pp_long, 3)) + '  pp_s: ' + str(round(pp_short, 3)) + ' deals:' +
+                                 str(deal_qnt) + ' pos: ' + str(round(price_position, 3)), 'log.txt')
 
         buy_strength = 0
         if last_pb < 0:
@@ -257,9 +257,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 deal_qnt = ppl_pps_dq[2]
                 data2sql.last_event_update2sql(pp_long, pp_short, deal_qnt)
                 write2file.write(str(datetime.datetime.now())[:19] + ' ' +
-                                 str(share[1]) + ' ' + str(case) + ' BUY ' + str(cl[-1]) + '  pp_long: ' +
-                                 str(pp_long) + '  pp_short: ' + str(pp_short) + '  deal_qnt:' +
-                                 str(deal_qnt) + '  dif_roc: ' + str(round(dif_roc, 3)), 'log.txt')
+                                 str(share[1]) + ' BUY:' + str(cl[-1]) + ' pp_L: ' +
+                                 str(round(pp_long, 3)) + '  pp_S: ' + str(round(pp_short, 3)) + ' deals:' +
+                                 str(deal_qnt) + ' pos: ' + str(round(price_position, 3)), 'log.txt')
 
     return
 
@@ -297,19 +297,17 @@ def analyze_sametime_cases():
 
 def analyze_events(figi):
     time_start = now() - datetime.timedelta(days=20)
-    directions_list = sql2data.get_sorted_list_by_figi('events_list', 'direction', figi, time_start)
-    price_list = sql2data.get_sorted_list_by_figi('events_list', 'price', figi, time_start)
-    case_time_list = sql2data.get_sorted_list_by_figi('events_list', 'event_time', figi, time_start)
+    list_dir_price_time = sql2data.get_sorted_list_by_figi('events_list', 'direction', 'price', 'event_time', figi, time_start)
     deal_qnt = 0
     pp_long = 0  # pseudo_profit_long
     pp_short = 0  # pseudo_profit_short
-    if directions_list:
-        prev_direction = directions_list[0][0]
+    if list_dir_price_time:
+        prev_direction = list_dir_price_time[0][0]
         list_prices = []
-        for di in range(0, len(directions_list)):
-            price = price_list[di][0]
-            direction = directions_list[di][0]
-            case_time = case_time_list[di][0]
+        for di in range(0, len(list_dir_price_time)):
+            price = list_dir_price_time[di][1]
+            direction = list_dir_price_time[di][0]
+            case_time = list_dir_price_time[di][2]
             if di == 0:
                 list_prices.append((direction, price, case_time))
             if prev_direction != direction:

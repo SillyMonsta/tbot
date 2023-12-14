@@ -199,11 +199,11 @@ def get_info_by_figi(table_name, column_name, figi):
     return results
 
 
-def get_sorted_list_by_figi(table_name, column_name, figi, time_from):
+def get_sorted_list_by_figi(table_name, column_name_1, column_name_2, column_name_3, figi, time_from):
     query = f'''
-            SELECT {column_name} 
+            SELECT {column_name_1}, {column_name_2}, {column_name_3} 
             FROM (
-                SELECT * FROM {table_name} 
+                SELECT * FROM {table_name}
                 WHERE figi = %s
             ) subquery
             WHERE event_time >= '{time_from}'
