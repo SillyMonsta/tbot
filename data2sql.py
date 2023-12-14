@@ -150,15 +150,16 @@ def events_list2sql(events_list):
     return
 
 
-def last_event_update2sql(pp_long, pp_short, deal_qnt):
+def last_event_update2sql(pp_long, pp_short, deal_qnt, trend):
     cursor.execute("SELECT MAX(event_time) FROM events_list")
     max_event_time = cursor.fetchone()[0]
     query = '''UPDATE events_list 
                 SET 
                 pp_long = %s,
                 pp_short = %s,
-                deal_qnt = %s
+                deal_qnt = %s,
+                trend = %s
                 WHERE event_time = %s'''
-    cursor.execute(query, (pp_long, pp_short, deal_qnt, max_event_time))
+    cursor.execute(query, (pp_long, pp_short, deal_qnt, trend, max_event_time))
     connection.commit()
     return
