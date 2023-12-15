@@ -135,7 +135,7 @@ def operation_in_progress2sql(operation_list):
 
 def events_list2sql(events_list):
     query = """
-    INSERT INTO events_list (ticker, event_case, figi, direction, price, pp_long, pp_short, deal_qnt, price_position, dif_roc, event_time)
+    INSERT INTO events_list (ticker, event_case, figi, direction, price, pp_long, pp_short, deal_qnt, price_position, trend, event_time)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT(figi, event_time, event_case) DO UPDATE SET
                 price = EXCLUDED.price,
@@ -143,7 +143,7 @@ def events_list2sql(events_list):
                 pp_short = EXCLUDED.pp_short,
                 deal_qnt = EXCLUDED.deal_qnt,
                 price_position = EXCLUDED.price_position,
-                dif_roc = EXCLUDED.dif_roc
+                trend = EXCLUDED.trend
                 """
     cursor.executemany(query, events_list)
     connection.commit()
