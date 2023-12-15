@@ -146,9 +146,9 @@ def get_last_price(figi):
 def get_last_time(table_name):
     query = f'''SELECT *
             FROM (
-                SELECT case_time FROM {table_name}
+                SELECT event_time FROM {table_name}
             ) subquery
-            ORDER BY case_time DESC LIMIT 1
+            ORDER BY event_time DESC LIMIT 1
             '''
     cursor.execute(query)
     result = cursor.fetchall()
