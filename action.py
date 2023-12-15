@@ -226,9 +226,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 data2sql.last_event_update2sql(pp_long, pp_short, deal_qnt, trend)
                 # отправляем в лог
                 write2file.write(str(datetime.datetime.now())[:19] + ' ' +
-                                 str(share[1]) + ' SELL:' + str(cl[-1]) + ' pp_l: ' + str(round(pp_long, 3)) +
-                                 ' trend:' + str(round(trend, 3)) + '  pp_s: ' + str(round(pp_short, 3)) + ' deals:' +
-                                 str(deal_qnt) + ' pos: ' + str(round(price_position, 3)), 'log.txt')
+                                 str(share[1]) + '  SELL: ' + str(cl[-1]) + '  pp_l: ' + str(round(pp_long, 3)) +
+                                 '  trend: ' + str(round(trend, 3)) + '  pp_s: ' + str(round(pp_short, 3)) + '  deals: ' +
+                                 str(deal_qnt) + '  pos: ' + str(round(price_position, 3)), 'log.txt')
 
         buy_strength = 0
         if last_pb < 0:
@@ -258,8 +258,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 data2sql.last_event_update2sql(pp_long, pp_short, deal_qnt, trend)
                 # отправляем в лог
                 write2file.write(str(datetime.datetime.now())[:19] + ' ' +
-                                 str(share[1]) + ' BUY:' + str(cl[-1]) + ' pp_L: ' + str(round(pp_long, 3)) +
-                                 ' trend:' + str(round(trend, 3)) + '  pp_S: ' + str(round(pp_short, 3)) + ' deals:' +
+                                 str(share[1]) + '  BUY: ' + str(cl[-1]) + '  pp_L: ' + str(round(pp_long, 3)) +
+                                 '  trend: ' + str(round(trend, 3)) + '  pp_S : ' + str(round(pp_short, 3)) + '  deals: ' +
                                  str(deal_qnt) + ' pos: ' + str(round(price_position, 3)), 'log.txt')
 
     return
