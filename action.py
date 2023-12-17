@@ -214,21 +214,28 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             if check_last_event(figi, 'SELL', case, last_price, x_time):
                 price_position = get_price_position(figi, table_name)
                 share = sql2data.get_info_by_figi('shares', '*', figi)[0]
+                ticker = share[1]
+                now_case = ('SELL', last_price, x_time.replace(microsecond=0))
+                result_analyze_events = analyze_events(figi, now_case)
+                pp_long = result_analyze_events[0]
+                pp_short = result_analyze_events[1]
+                deal_qnt = result_analyze_events[2]
+                trend_far = result_analyze_events[3]
+                duration = result_analyze_events[4]
+                trend_near = result_analyze_events[5]
 
-                events_list.append((share[1], case, figi, 'SELL', last_price, 0, 0,
-                                    0, round(price_position, 3), 0, x_time.replace(microsecond=0)))
+                events_list.append((ticker, case, figi, 'SELL', last_price, round(price_position, 3), round(pp_long, 3),
+                                    deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
                 data2sql.events_list2sql(events_list)
-                ppl_pps_dq = analyze_events(figi)
-                pp_long = ppl_pps_dq[0]
-                pp_short = ppl_pps_dq[1]
-                deal_qnt = ppl_pps_dq[2]
-                trend = ppl_pps_dq[3]
-                data2sql.last_event_update2sql(pp_long, pp_short, deal_qnt, trend)
+
                 # отправляем в лог
                 write2file.write(str(datetime.datetime.now())[:19] + ' ' +
-                                 str(share[1]) + '  SELL: ' + str(cl[-1]) + '  pp_l: ' + str(round(pp_long, 3)) +
-                                 '  trend: ' + str(round(trend, 3)) + '  pp_s: ' + str(round(pp_short, 3)) + '  deals: ' +
-                                 str(deal_qnt) + '  pos: ' + str(round(price_position, 3)), 'log.txt')
+                                 str(share[1]) + '  SELL: ' + str(cl[-1]) +
+                                 ' pos: ' + str(round(price_position, 3)) +
+                                 '  pseudo_prof: ' + str(round(pp_long, 3)) +
+                                 '  deals: ' + str(deal_qnt) +
+                                 '  trend_near: ' + str(round(trend_near, 3)) +
+                                 '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
 
         buy_strength = 0
         if last_pb < 0:
@@ -247,58 +254,38 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             if check_last_event(figi, 'BUY', case, last_price, x_time):
                 price_position = get_price_position(figi, table_name)
                 share = sql2data.get_info_by_figi('shares', '*', figi)[0]
-                events_list.append((share[1], case, figi, 'BUY', last_price, 0, 0,
-                                    0, round(price_position, 3), 0, x_time.replace(microsecond=0)))
+                ticker = share[1]
+                now_case = ('BUY', last_price, x_time.replace(microsecond=0))
+                result_analyze_events = analyze_events(figi, now_case)
+                pp_long = result_analyze_events[0]
+                pp_short = result_analyze_events[1]
+                deal_qnt = result_analyze_events[2]
+                trend_far = result_analyze_events[3]
+                duration = result_analyze_events[4]
+                trend_near = result_analyze_events[5]
+
+                events_list.append((ticker, case, figi, 'BUY', last_price, round(price_position, 3), round(pp_short, 3),
+                                    deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
                 data2sql.events_list2sql(events_list)
-                ppl_pps_dq = analyze_events(figi)
-                pp_long = ppl_pps_dq[0]
-                pp_short = ppl_pps_dq[1]
-                deal_qnt = ppl_pps_dq[2]
-                trend = ppl_pps_dq[3]
-                data2sql.last_event_update2sql(pp_long, pp_short, deal_qnt, trend)
+
                 # отправляем в лог
                 write2file.write(str(datetime.datetime.now())[:19] + ' ' +
-                                 str(share[1]) + '  BUY: ' + str(cl[-1]) + '  pp_L: ' + str(round(pp_long, 3)) +
-                                 '  trend: ' + str(round(trend, 3)) + '  pp_S : ' + str(round(pp_short, 3)) + '  deals: ' +
-                                 str(deal_qnt) + ' pos: ' + str(round(price_position, 3)), 'log.txt')
+                                 str(share[1]) + '  BUY: ' + str(cl[-1]) +
+                                 ' pos: ' + str(round(price_position, 3)) +
+                                 '  pseudo_prof: ' + str(round(pp_short, 3)) +
+                                 '  deals: ' + str(deal_qnt) +
+                                 '  trend_near: ' + str(round(trend_near, 3)) +
+                                 '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
 
     return
 
 
-def analyze_sametime_cases():
-    results = sql2data.all_from_events()
-    prev_case_time = ''
-    prev_direction = ''
-    prev_ticker = ''
-
-    for result in results:
-        figi = result[2]
-        direction = result[3]
-        price = result[4]
-        price_position = result[8]
-        case_time = result[10]
-        ticker = result[0]
-
-        # ищем сделки совершенные в одно и тоже, или почти одно и тоже, время
-        if prev_case_time:
-            date1 = datetime.datetime.fromisoformat(case_time)
-            date2 = datetime.datetime.fromisoformat(prev_case_time)
-            delta = date1 - date2
-            dif_in_sec = delta.total_seconds()
-
-        prev_case_time = case_time
-        prev_ticker = ticker
-        prev_direction = direction
-        prev_figi = figi
-        prev_price_position = price_position
-        prev_price = price
-
-    return
-
-
-def analyze_events(figi):
+def analyze_events(figi, now_case):
     time_start = now() - datetime.timedelta(days=40)
     list_dir_price_time = sql2data.get_sorted_list_by_figi('events_list', 'direction', 'price', 'event_time', figi, time_start)
+    # добавляем текущий случай, то, чего ещё нет в таблице events_list
+    list_dir_price_time.append(now_case)
+    last_prices_same_dir = []
     trend = 0
     periodicity = 0
     deal_qnt = 0
@@ -313,48 +300,53 @@ def analyze_events(figi):
             case_time = list_dir_price_time[di][2]
             if di == 0:
                 list_cases.append((direction, price, case_time))
+                last_prices_same_dir = [price]
             if prev_direction != direction:
                 list_cases.append((direction, price, case_time))
+                last_prices_same_dir = [price]
+            else:
+                last_prices_same_dir.append(price)
             prev_direction = direction
-        else:
-            prev_prev_deal = ('', 0, '')
-            prev_deal = ('', 0, '')
-            profit_long_list = []
-            profit_short_list = []
-            for deal in list_cases:
-                deal_direction = deal[0]
-                deal_price = deal[1]
-                deal_time = deal[2]
-                prev_deal_direction = prev_deal[0]
-                prev_deal_price = prev_deal[1]
-                prev_deal_time = prev_deal[2]
+        prev_prev_deal = ('', 0, '')
+        prev_deal = ('', 0, '')
+        profit_long_list = []
+        profit_short_list = []
+        for deal in list_cases:
+            deal_direction = deal[0]
+            deal_price = deal[1]
+            deal_time = deal[2]
+            prev_deal_direction = prev_deal[0]
+            prev_deal_price = prev_deal[1]
+            prev_deal_time = prev_deal[2]
 
-                # лонг
-                if deal_direction == 'SELL' and prev_deal_direction == 'BUY':
-                    profit_long_list.append(round((deal_price - prev_deal_price) / deal_price, 4))
-                    if prev_prev_deal[1]:
-                        trend = (deal_price - prev_prev_deal[1]) / deal_price
-                        periodicity = (deal_time - prev_prev_deal[2]).total_seconds() / 3600
-                        break
-                # шорт
-                if deal_direction == 'BUY' and prev_deal_direction == 'SELL':
-                    profit_short_list.append(round((prev_deal_price - deal_price) / prev_deal_price, 4))
-                    if prev_prev_deal[1]:
-                        trend = (deal_price - prev_prev_deal[1]) / deal_price
-                        periodicity = (deal_time - prev_prev_deal[2]).total_seconds() / 3600
-                        break
+            # лонг
+            if deal_direction == 'SELL' and prev_deal_direction == 'BUY':
+                profit_long_list.append(round((deal_price - prev_deal_price) / deal_price, 4))
+                if prev_prev_deal[1]:
+                    trend = (deal_price - prev_prev_deal[1]) / deal_price
+                    periodicity = (deal_time - prev_prev_deal[2]).total_seconds() / 3600
+                    break
+            # шорт
+            if deal_direction == 'BUY' and prev_deal_direction == 'SELL':
+                profit_short_list.append(round((prev_deal_price - deal_price) / prev_deal_price, 4))
+                if prev_prev_deal[1]:
+                    trend = (deal_price - prev_prev_deal[1]) / deal_price
+                    periodicity = (deal_time - prev_prev_deal[2]).total_seconds() / 3600
+                    break
 
-                prev_prev_deal = prev_deal
-                prev_deal = deal
+            prev_prev_deal = prev_deal
+            prev_deal = deal
 
-            deal_qnt = len(profit_short_list) + len(profit_long_list)
+        deal_qnt = len(profit_short_list) + len(profit_long_list)
 
-            if profit_short_list:
-                pp_short = sum(profit_short_list) / len(profit_short_list)
-            if profit_long_list:
-                pp_long = sum(profit_long_list) / len(profit_long_list)
+        if profit_short_list:
+            pp_short = sum(profit_short_list) / len(profit_short_list)
+        if profit_long_list:
+            pp_long = sum(profit_long_list) / len(profit_long_list)
 
-    return pp_long, pp_short, deal_qnt, trend, periodicity
+    near_trend = (last_prices_same_dir[-1] - last_prices_same_dir[0]) / last_prices_same_dir[-1]
+
+    return pp_long, pp_short, deal_qnt, trend, periodicity, near_trend
 
 
 def prepare_events_extraction():

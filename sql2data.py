@@ -59,8 +59,8 @@ def create_candles(table_name):
 def create_events_list():
     cursor.execute("CREATE TABLE events_list (ticker VARCHAR(50), event_case TEXT, "
                    "figi VARCHAR(50), direction VARCHAR(50), price NUMERIC,"
-                   "pp_long NUMERIC, pp_short NUMERIC, deal_qnt NUMERIC, price_position NUMERIC,"
-                   "trend NUMERIC, event_time TIMESTAMPTZ)")
+                   "price_position NUMERIC, pseudo_profit NUMERIC, deal_qnt NUMERIC,"
+                   "trend_near NUMERIC, trend_far NUMERIC, event_time TIMESTAMPTZ)")
     cursor.execute("""CREATE UNIQUE INDEX events_list_figi_idx 
                     ON public.events_list USING btree (figi, event_time, "event_case")""")
     return
