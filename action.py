@@ -202,9 +202,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             sell_strength += 1
             case = case + ' PB>1'
 
-        if last_ef - prev_ef < 0 and prev_ef >= max_ef * 0.7 and last_rsi > 70:
+        if (last_ef - prev_ef < 0 and prev_ef >= max_ef * 0.7) or last_rsi > 70:
             sell_strength += 1
-            case = case + ' maxEF&RSI'
+            case = case + ' maxEForRSI'
 
         if dif_roc > 1:
             sell_strength += 1
@@ -228,12 +228,16 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                                     deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
                 data2sql.events_list2sql(events_list)
 
+                pseudo_order = ' '
+                if trend_near > 0.009:
+                    pseudo_order = ' PSEUDO ORDER --> '
+
                 # отправляем в лог
-                write2file.write(str(datetime.datetime.now())[:19] + ' ' +
+                write2file.write(str(datetime.datetime.now())[:19] + pseudo_order +
                                  str(share[1]) + '  SELL: ' + str(cl[-1]) +
                                  ' pos: ' + str(round(price_position, 3)) +
                                  '  pseudo_prof: ' + str(round(pp_long, 3)) +
-                                 '  deals: ' + str(deal_qnt) +
+                                 '  deal_qnt: ' + str(deal_qnt) +
                                  '  trend_near: ' + str(round(trend_near, 3)) +
                                  '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
 
@@ -242,9 +246,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             buy_strength += 1
             case = case + ' PB<0'
 
-        if 0 < last_ef - prev_ef and prev_ef <= min_ef * 0.7 and last_rsi < 30:
+        if (0 < last_ef - prev_ef and prev_ef <= min_ef * 0.7) or last_rsi < 30:
             buy_strength += 1
-            case = case + ' minEF&RSI'
+            case = case + ' minEForRSI'
 
         if dif_roc < -1:
             buy_strength += 1
@@ -268,12 +272,16 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                                     deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
                 data2sql.events_list2sql(events_list)
 
+                pseudo_order = ' '
+                if trend_near < -0.009:
+                    pseudo_order = ' PSEUDO ORDER --> '
+
                 # отправляем в лог
-                write2file.write(str(datetime.datetime.now())[:19] + ' ' +
+                write2file.write(str(datetime.datetime.now())[:19] + pseudo_order +
                                  str(share[1]) + '  BUY: ' + str(cl[-1]) +
                                  ' pos: ' + str(round(price_position, 3)) +
                                  '  pseudo_prof: ' + str(round(pp_short, 3)) +
-                                 '  deals: ' + str(deal_qnt) +
+                                 '  deal_qnt: ' + str(deal_qnt) +
                                  '  trend_near: ' + str(round(trend_near, 3)) +
                                  '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
 
@@ -281,7 +289,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
 
 def analyze_events(figi, now_case):
-    time_start = now() - datetime.timedelta(days=40)
+    time_start = now() - datetime.timedelta(days=30)
     list_dir_price_time = sql2data.get_sorted_list_by_figi('events_list', 'direction', 'price', 'event_time', figi, time_start)
     # добавляем текущий случай, то, чего ещё нет в таблице events_list
     list_dir_price_time.append(now_case)
@@ -325,14 +333,12 @@ def analyze_events(figi, now_case):
                 if prev_prev_deal[1]:
                     trend = (deal_price - prev_prev_deal[1]) / deal_price
                     periodicity = (deal_time - prev_prev_deal[2]).total_seconds() / 3600
-                    break
             # шорт
             if deal_direction == 'BUY' and prev_deal_direction == 'SELL':
                 profit_short_list.append(round((prev_deal_price - deal_price) / prev_deal_price, 4))
                 if prev_prev_deal[1]:
                     trend = (deal_price - prev_prev_deal[1]) / deal_price
                     periodicity = (deal_time - prev_prev_deal[2]).total_seconds() / 3600
-                    break
 
             prev_prev_deal = prev_deal
             prev_deal = deal
@@ -396,7 +402,7 @@ def events_extraction(history_candle_days, time_from):
             try:
                 x_time = figi_1m_candles[index][7]
                 write2file.write(str(datetime.datetime.now())[:19] +
-                                 ' start events_extraction for: ' + str(ticker) + str(x_time), 'log.txt')
+                                 ' start events_extraction for: ' + str(ticker) + ' from ' + str(x_time), 'log.txt')
 
             except IndexError:
                 write2file.write(str(datetime.datetime.now())[:19] +
