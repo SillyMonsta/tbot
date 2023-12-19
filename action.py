@@ -104,7 +104,7 @@ def prepare_stream_connection():
                 # проверяем дату последней свечи в таблице, что-бы понять сколько нужно исторических свеч
                 date_last_candle = sql2data.get_last_candle_attribute('candles', 'candle_time')[0][0]
                 seconds_from_last_candle = (
-                            now() - datetime.datetime.fromisoformat(str(date_last_candle))).total_seconds()
+                        now() - datetime.datetime.fromisoformat(str(date_last_candle))).total_seconds()
                 hours_from_last_candle = seconds_from_last_candle / 3600
                 # если 7 утра или понедельник и прошло 15 часов или 63 обнуляем days_from_last_candle
                 if (abs(hours_from_last_candle - 15) < 0.1 and int(now().hour) == 7) \
@@ -203,7 +203,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             sell_strength += 1
             case = case + ' PB>1'
 
-        if (last_ef - prev_ef < 0 and prev_ef >= max_ef * 0.7) or last_rsi > 70:
+        if (last_ef - prev_ef < 0 and prev_ef >= max_ef * 0.7) and last_rsi > 70:
             sell_strength += 1
             case = case + ' maxEForRSI'
 
@@ -225,12 +225,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 duration = result_analyze_events[4]
                 trend_near = result_analyze_events[5]
 
-                if trend_near > 0:
-                    events_list.append((ticker, case, figi, 'SELL', last_price, round(price_position, 3), round(pp_long, 3),
-                                        deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
-                else:
-                    events_list.append((ticker, 'ORDER', figi, 'SELL', last_price, round(price_position, 3), round(pp_long, 3),
-                                        deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
+                events_list.append((ticker, case, figi, 'SELL', last_price, round(price_position, 3), round(pp_long, 3),
+                                    deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
 
                 data2sql.events_list2sql(events_list)
 
@@ -248,7 +244,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             buy_strength += 1
             case = case + ' PB<0'
 
-        if (0 < last_ef - prev_ef and prev_ef <= min_ef * 0.7) or last_rsi < 30:
+        if (0 < last_ef - prev_ef and prev_ef <= min_ef * 0.7) and last_rsi < 30:
             buy_strength += 1
             case = case + ' minEForRSI'
 
@@ -270,14 +266,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 duration = result_analyze_events[4]
                 trend_near = result_analyze_events[5]
 
-                if trend_near < 0:
-                    events_list.append(
-                        (ticker, case, figi, 'BUY', last_price, round(price_position, 3), round(pp_short, 3),
-                         deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
-                else:
-                    events_list.append(
-                        (ticker, 'ORDER', figi, 'BUY', last_price, round(price_position, 3), round(pp_short, 3),
-                         deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
+                events_list.append((ticker, case, figi, 'BUY', last_price, round(price_position, 3), round(pp_short, 3),
+                                    deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
 
                 data2sql.events_list2sql(events_list)
 
