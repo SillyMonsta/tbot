@@ -103,7 +103,8 @@ def prepare_stream_connection():
             try:
                 # проверяем дату последней свечи в таблице, что-бы понять сколько нужно исторических свеч
                 date_last_candle = sql2data.get_last_candle_attribute('candles', 'candle_time')[0][0]
-                seconds_from_last_candle = (now() - datetime.datetime.fromisoformat(str(date_last_candle))).total_seconds()
+                seconds_from_last_candle = (
+                            now() - datetime.datetime.fromisoformat(str(date_last_candle))).total_seconds()
                 hours_from_last_candle = seconds_from_last_candle / 3600
                 # если 7 утра или понедельник и прошло 15 часов или 63 обнуляем days_from_last_candle
                 if (abs(hours_from_last_candle - 15) < 0.1 and int(now().hour) == 7) \
@@ -227,16 +228,20 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 if trend_near > 0:
                     events_list.append((ticker, case, figi, 'SELL', last_price, round(price_position, 3), round(pp_long, 3),
                                         deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
-                    data2sql.events_list2sql(events_list)
+                else:
+                    events_list.append((ticker, 'ORDER', figi, 'SELL', last_price, round(price_position, 3), round(pp_long, 3),
+                                        deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
 
-                    # отправляем в лог
-                    write2file.write(str(datetime.datetime.now())[:19] + ' ' +
-                                     str(share[1]) + '  SELL: ' + str(cl[-1]) +
-                                     ' pos: ' + str(round(price_position, 3)) +
-                                     '  pseudo_prof: ' + str(round(pp_long, 3)) +
-                                     '  deal_qnt: ' + str(deal_qnt) +
-                                     '  trend_near: ' + str(round(trend_near, 3)) +
-                                     '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
+                data2sql.events_list2sql(events_list)
+
+                # отправляем в лог
+                write2file.write(str(datetime.datetime.now())[:19] + ' ' +
+                                 str(share[1]) + '  SELL: ' + str(cl[-1]) +
+                                 ' pos: ' + str(round(price_position, 3)) +
+                                 '  pseudo_prof: ' + str(round(pp_long, 3)) +
+                                 '  deal_qnt: ' + str(deal_qnt) +
+                                 '  trend_near: ' + str(round(trend_near, 3)) +
+                                 '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
 
         buy_strength = 0
         if last_pb < 0:
@@ -266,25 +271,32 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 trend_near = result_analyze_events[5]
 
                 if trend_near < 0:
-                    events_list.append((ticker, case, figi, 'BUY', last_price, round(price_position, 3), round(pp_short, 3),
-                                        deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
-                    data2sql.events_list2sql(events_list)
+                    events_list.append(
+                        (ticker, case, figi, 'BUY', last_price, round(price_position, 3), round(pp_short, 3),
+                         deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
+                else:
+                    events_list.append(
+                        (ticker, 'ORDER', figi, 'BUY', last_price, round(price_position, 3), round(pp_short, 3),
+                         deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
 
-                    # отправляем в лог
-                    write2file.write(str(datetime.datetime.now())[:19] + ' ' +
-                                     str(share[1]) + '  BUY: ' + str(cl[-1]) +
-                                     ' pos: ' + str(round(price_position, 3)) +
-                                     '  pseudo_prof: ' + str(round(pp_short, 3)) +
-                                     '  deal_qnt: ' + str(deal_qnt) +
-                                     '  trend_near: ' + str(round(trend_near, 3)) +
-                                     '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
+                data2sql.events_list2sql(events_list)
+
+                # отправляем в лог
+                write2file.write(str(datetime.datetime.now())[:19] + ' ' +
+                                 str(share[1]) + '  BUY: ' + str(cl[-1]) +
+                                 ' pos: ' + str(round(price_position, 3)) +
+                                 '  pseudo_prof: ' + str(round(pp_short, 3)) +
+                                 '  deal_qnt: ' + str(deal_qnt) +
+                                 '  trend_near: ' + str(round(trend_near, 3)) +
+                                 '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
 
     return
 
 
 def analyze_events(figi, now_case):
     time_start = now() - datetime.timedelta(days=30)
-    list_dir_price_time = sql2data.get_sorted_list_by_figi('events_list', 'direction', 'price', 'event_time', figi, time_start)
+    list_dir_price_time = sql2data.get_sorted_list_by_figi('events_list', 'direction', 'price', 'event_time', figi,
+                                                           time_start)
     # добавляем текущий случай, то, чего ещё нет в таблице events_list
     list_dir_price_time.append(now_case)
     last_prices_same_dir = []
