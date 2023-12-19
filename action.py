@@ -224,22 +224,19 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 duration = result_analyze_events[4]
                 trend_near = result_analyze_events[5]
 
-                events_list.append((ticker, case, figi, 'SELL', last_price, round(price_position, 3), round(pp_long, 3),
-                                    deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
-                data2sql.events_list2sql(events_list)
+                if trend_near > 0:
+                    events_list.append((ticker, case, figi, 'SELL', last_price, round(price_position, 3), round(pp_long, 3),
+                                        deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
+                    data2sql.events_list2sql(events_list)
 
-                pseudo_order = ' '
-                if trend_near > 0.009:
-                    pseudo_order = ' PSEUDO ORDER --> '
-
-                # отправляем в лог
-                write2file.write(str(datetime.datetime.now())[:19] + pseudo_order +
-                                 str(share[1]) + '  SELL: ' + str(cl[-1]) +
-                                 ' pos: ' + str(round(price_position, 3)) +
-                                 '  pseudo_prof: ' + str(round(pp_long, 3)) +
-                                 '  deal_qnt: ' + str(deal_qnt) +
-                                 '  trend_near: ' + str(round(trend_near, 3)) +
-                                 '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
+                    # отправляем в лог
+                    write2file.write(str(datetime.datetime.now())[:19] + ' ' +
+                                     str(share[1]) + '  SELL: ' + str(cl[-1]) +
+                                     ' pos: ' + str(round(price_position, 3)) +
+                                     '  pseudo_prof: ' + str(round(pp_long, 3)) +
+                                     '  deal_qnt: ' + str(deal_qnt) +
+                                     '  trend_near: ' + str(round(trend_near, 3)) +
+                                     '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
 
         buy_strength = 0
         if last_pb < 0:
@@ -268,22 +265,19 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 duration = result_analyze_events[4]
                 trend_near = result_analyze_events[5]
 
-                events_list.append((ticker, case, figi, 'BUY', last_price, round(price_position, 3), round(pp_short, 3),
-                                    deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
-                data2sql.events_list2sql(events_list)
+                if trend_near < 0:
+                    events_list.append((ticker, case, figi, 'BUY', last_price, round(price_position, 3), round(pp_short, 3),
+                                        deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
+                    data2sql.events_list2sql(events_list)
 
-                pseudo_order = ' '
-                if trend_near < -0.009:
-                    pseudo_order = ' PSEUDO ORDER --> '
-
-                # отправляем в лог
-                write2file.write(str(datetime.datetime.now())[:19] + pseudo_order +
-                                 str(share[1]) + '  BUY: ' + str(cl[-1]) +
-                                 ' pos: ' + str(round(price_position, 3)) +
-                                 '  pseudo_prof: ' + str(round(pp_short, 3)) +
-                                 '  deal_qnt: ' + str(deal_qnt) +
-                                 '  trend_near: ' + str(round(trend_near, 3)) +
-                                 '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
+                    # отправляем в лог
+                    write2file.write(str(datetime.datetime.now())[:19] + ' ' +
+                                     str(share[1]) + '  BUY: ' + str(cl[-1]) +
+                                     ' pos: ' + str(round(price_position, 3)) +
+                                     '  pseudo_prof: ' + str(round(pp_short, 3)) +
+                                     '  deal_qnt: ' + str(deal_qnt) +
+                                     '  trend_near: ' + str(round(trend_near, 3)) +
+                                     '  trend_far : ' + str(round(trend_far, 3)), 'log.txt')
 
     return
 
