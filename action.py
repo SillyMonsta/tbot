@@ -205,7 +205,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
         if (last_ef - prev_ef < 0 and prev_ef >= max_ef * 0.7) and last_rsi > 70:
             sell_strength += 1
-            case = case + ' maxEForRSI'
+            case = case + ' maxEF&RSI'
 
         if dif_roc > 1:
             sell_strength += 1
@@ -246,7 +246,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
         if (0 < last_ef - prev_ef and prev_ef <= min_ef * 0.7) and last_rsi < 30:
             buy_strength += 1
-            case = case + ' minEForRSI'
+            case = case + ' minEF&RSI'
 
         if dif_roc < -1:
             buy_strength += 1
