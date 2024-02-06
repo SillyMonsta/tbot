@@ -41,6 +41,12 @@ def update_pid(scrypt_name, connection_pid):
     return
 
 
+def update_control_list(ticker, column_name, value):
+    query = f"UPDATE control_list SET {column_name} = %s WHERE ticker = %s"
+    cursor.execute(query, (value, ticker))
+    connection.commit()
+
+
 def shares2sql(shares_list):
     query = f"""
         INSERT INTO shares (figi, ticker, lot, currency, instrument_name, exchange, sector, trading_status, 
@@ -152,16 +158,16 @@ def events_list2sql(events_list):
     return
 
 
-def last_event_update2sql(pp_long, pp_short, deal_qnt, trend):
-    cursor.execute("SELECT MAX(event_time) FROM events_list")
-    max_event_time = cursor.fetchone()[0]
-    query = '''UPDATE events_list 
-                SET 
-                pp_long = %s,
-                pp_short = %s,
-                deal_qnt = %s,
-                trend = %s
-                WHERE event_time = %s'''
-    cursor.execute(query, (pp_long, pp_short, deal_qnt, trend, max_event_time))
-    connection.commit()
-    return
+#def last_event_update2sql(pp_long, pp_short, deal_qnt, trend):
+#    cursor.execute("SELECT MAX(event_time) FROM events_list")
+#    max_event_time = cursor.fetchone()[0]
+    #query = '''UPDATE events_list
+    #            SET
+    #            pp_long = %s,
+    #            pp_short = %s,
+    #            deal_qnt = %s,
+    #            trend = %s
+    #            WHERE event_time = %s'''
+    #cursor.execute(query, (pp_long, pp_short, deal_qnt, trend, max_event_time))
+    #connection.commit()
+    #return

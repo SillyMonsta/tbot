@@ -56,6 +56,14 @@ def create_candles(table_name):
     return
 
 
+def create_control_list():
+    cursor.execute("CREATE TABLE control_list (ticker VARCHAR(50),"
+                   "start_direction VARCHAR(50), start_price NUMERIC, target_price NUMERIC,"
+                   "loss_percent NUMERIC, price_change_percent NUMERIC, stop_loss NUMERIC)")
+
+    return
+
+
 def create_events_list():
     cursor.execute("CREATE TABLE events_list (ticker VARCHAR(50), event_case TEXT, "
                    "figi VARCHAR(50), direction VARCHAR(50), price NUMERIC,"
@@ -195,6 +203,13 @@ def get_day_candles(figi, table_name):
 def get_info_by_figi(table_name, column_name, figi):
     query = f'''SELECT {column_name} FROM {table_name} WHERE figi = %s'''
     cursor.execute(query, (figi,))
+    results = cursor.fetchall()
+    return results
+
+
+def share_from_control_list_by_ticker(ticker):
+    query = f'''SELECT * FROM control_list WHERE ticker = %s'''
+    cursor.execute(query, (ticker,))
     results = cursor.fetchall()
     return results
 
