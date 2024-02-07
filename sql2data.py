@@ -64,6 +64,13 @@ def create_control_list():
     return
 
 
+def create_orders_history():
+    cursor.execute("CREATE TABLE orders_history (ticker VARCHAR(50), "
+                   "figi VARCHAR(50), direction VARCHAR(50), price NUMERIC,"
+                   "quantity NUMERIC, order_id VARCHAR(50), order_time TIMESTAMPTZ)")
+    return
+
+
 def create_events_list():
     cursor.execute("CREATE TABLE events_list (ticker VARCHAR(50), event_case TEXT, "
                    "figi VARCHAR(50), direction VARCHAR(50), price NUMERIC,"

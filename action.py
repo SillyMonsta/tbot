@@ -133,7 +133,7 @@ def prepare_stream_connection():
     return figi_list
 
 
-def test_trade(manual_set, direction, last_price):
+def test_trade(manual_set, direction, last_price, last_price0, case):
     ticker = manual_set[0][0]
     start_direction = manual_set[0][1]
     loss_percent = manual_set[0][4]
@@ -146,12 +146,14 @@ def test_trade(manual_set, direction, last_price):
             value = last_price + last_price * loss_percent / 100
         data2sql.update_control_list(ticker, 'stop_loss', value)
         # отправляем в лог
-        write2file.write(str(datetime.datetime.now())[:19] + ' ' + str(ticker) + ' ' + direction + ' ' + str(last_price)
-                         , 'log.txt')
+        write2file.write(str(datetime.datetime.now())[:19] + ' ' + str(ticker) + ' ' + direction + ' '
+                         + str(last_price).split('.')[0] + '.' + str(last_price).split('.')[1][:4]
+                         + ' ' + last_price0
+                         + ' ' + case, 'log.txt')
     return
 
 
-def check_stop_loss(manual_set, last_price):
+def check_stop_loss(manual_set, last_price, last_price0):
     ticker = manual_set[0][0]
     start_direction = manual_set[0][1]
     start_price = manual_set[0][2]
@@ -174,14 +176,14 @@ def check_stop_loss(manual_set, last_price):
     # если был BUY то ожидаем SELL
     if start_direction == 'BUY':
         if last_price <= stop_loss:
-            test_trade(manual_set, 'SELL', last_price)
+            test_trade(manual_set, 'SELL', last_price, last_price0, 'stop_loss')
         elif (last_price - stop_loss) / last_price > loss_percent / 100:
             value = last_price - last_price * loss_percent / 100
             data2sql.update_control_list(ticker, 'stop_loss', value)
     # если был SELL то ожидаем BUY
     if start_direction == 'SELL':
         if last_price >= stop_loss:
-            test_trade(manual_set, 'BUY', last_price)
+            test_trade(manual_set, 'BUY', last_price, last_price0, 'stop_loss')
         elif (stop_loss - last_price) / stop_loss > loss_percent / 100:
             value = last_price + last_price * loss_percent / 100
             data2sql.update_control_list(ticker, 'stop_loss', value)
@@ -225,6 +227,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 vo[-1] = float(new_candle[3])
 
         last_price = Decimal(cl[-1])
+        last_price0 = candles[-1][3]
 
         dict_ohlcv = {
             'open': op,
@@ -287,7 +290,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
         ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
         manual_set = sql2data.share_from_control_list_by_ticker(ticker)
         if manual_set:
-            result_check_stop_loss = check_stop_loss(manual_set, last_price)
+            result_check_stop_loss = check_stop_loss(manual_set, last_price, last_price0)
             # если цена поднялась выше порога
             if result_check_stop_loss[0]:
                 sell_strength += 1
@@ -298,9 +301,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 buy_case = buy_case + ' Price<'
 
             if sell_strength >= 2:
-                test_trade(manual_set, 'SELL', last_price)
+                test_trade(manual_set, 'SELL', last_price, last_price0, sell_case)
             if buy_strength >= 2:
-                test_trade(manual_set, 'BUY', last_price)
+                test_trade(manual_set, 'BUY', last_price, last_price0, buy_case)
 
         if sell_strength >= 2:
             if check_last_event(figi, 'SELL', sell_case, last_price, x_time):
