@@ -320,7 +320,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 deal_qnt = result_analyze_events[2]
                 trend_far = result_analyze_events[3]
                 trend_near = result_analyze_events[5]
-
+                price_position_days = get_price_position(figi, table_name)
                 events_list.append(
                     (ticker, sell_case, figi, 'SELL', last_price, round(price_position_days, 3), round(pp_long, 3),
                      deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
@@ -335,7 +335,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 deal_qnt = result_analyze_events[2]
                 trend_far = result_analyze_events[3]
                 trend_near = result_analyze_events[5]
-
+                price_position_days = get_price_position(figi, table_name)
                 events_list.append(
                     (ticker, buy_case, figi, 'BUY', last_price, round(price_position_days, 3), round(pp_short, 3),
                      deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
