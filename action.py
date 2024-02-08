@@ -133,7 +133,7 @@ def prepare_stream_connection():
     return figi_list
 
 
-def test_trade(manual_set, direction, last_price, last_price0, case):
+def test_trade(manual_set, direction, last_price, case):
     ticker = manual_set[0][0]
     start_direction = manual_set[0][1]
     loss_percent = manual_set[0][4]
@@ -147,19 +147,16 @@ def test_trade(manual_set, direction, last_price, last_price0, case):
         data2sql.update_control_list(ticker, 'stop_loss', value)
         # отправляем в лог
         write2file.write(str(datetime.datetime.now())[:19] + ' ' + str(ticker) + ' ' + direction + ' '
-                         + str(last_price).split('.')[0] + '.' + str(last_price).split('.')[1][:4]
-                         + ' ' + last_price0
-                         + ' ' + case, 'log.txt')
+                         + str(last_price) + ' ' + case, 'log.txt')
     return
 
 
-def check_stop_loss(manual_set, last_price, last_price0):
+def check_stop_loss(manual_set, last_price, price_change_percent):
     ticker = manual_set[0][0]
     start_direction = manual_set[0][1]
     start_price = manual_set[0][2]
     target_price = manual_set[0][3]
     loss_percent = manual_set[0][4]
-    price_change_percent = manual_set[0][5]
     stop_loss = manual_set[0][5]
 
     sell_case = False
@@ -176,15 +173,15 @@ def check_stop_loss(manual_set, last_price, last_price0):
     # если был BUY то ожидаем SELL
     if start_direction == 'BUY':
         if last_price <= stop_loss:
-            test_trade(manual_set, 'SELL', last_price, last_price0, 'stop_loss')
+            test_trade(manual_set, 'SELL', last_price, 'stop_loss')
         elif (last_price - stop_loss) / last_price > loss_percent / 100:
             value = last_price - last_price * loss_percent / 100
             data2sql.update_control_list(ticker, 'stop_loss', value)
     # если был SELL то ожидаем BUY
     if start_direction == 'SELL':
-        if last_price >= stop_loss:
-            test_trade(manual_set, 'BUY', last_price, last_price0, 'stop_loss')
-        elif (stop_loss - last_price) / stop_loss > loss_percent / 100:
+        # if last_price >= stop_loss:
+        #    test_trade(manual_set, 'BUY', last_price, 'stop_loss')
+        if (stop_loss - last_price) / stop_loss > loss_percent / 100:
             value = last_price + last_price * loss_percent / 100
             data2sql.update_control_list(ticker, 'stop_loss', value)
 
@@ -226,8 +223,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 cl[-1] = float(new_candle[2])
                 vo[-1] = float(new_candle[3])
 
-        last_price = Decimal(cl[-1])
-        last_price0 = candles[-1][3]
+        # last_price = Decimal(cl[-1])
+        last_price = candles[-1][3]
 
         dict_ohlcv = {
             'open': op,
@@ -290,7 +287,17 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
         ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
         manual_set = sql2data.share_from_control_list_by_ticker(ticker)
         if manual_set:
-            result_check_stop_loss = check_stop_loss(manual_set, last_price, last_price0)
+            start_price = manual_set[0][2]
+            max_hi_hours = max(hi)
+            min_lo_hours = min(lo)
+            price_change_percent = (max_hi_hours - min_lo_hours) / max_hi_hours / 2
+            price_start_position_hours = (start_price / (max_hi_hours - min_lo_hours)) - \
+                                         (min_lo_hours / (max_hi_hours - min_lo_hours))
+            price_position_days = get_price_position(figi, table_name)
+            data2sql.update_control_list(ticker, 'price_change_percent', price_change_percent)
+            data2sql.update_control_list(ticker, 'price_start_position_hours', price_start_position_hours)
+            data2sql.update_control_list(ticker, 'price_position_days', price_position_days)
+            result_check_stop_loss = check_stop_loss(manual_set, last_price, price_change_percent)
             # если цена поднялась выше порога
             if result_check_stop_loss[0]:
                 sell_strength += 1
@@ -301,13 +308,12 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 buy_case = buy_case + ' Price<'
 
             if sell_strength >= 2:
-                test_trade(manual_set, 'SELL', last_price, last_price0, sell_case)
+                test_trade(manual_set, 'SELL', last_price, sell_case)
             if buy_strength >= 2:
-                test_trade(manual_set, 'BUY', last_price, last_price0, buy_case)
+                test_trade(manual_set, 'BUY', last_price, buy_case)
 
         if sell_strength >= 2:
             if check_last_event(figi, 'SELL', sell_case, last_price, x_time):
-                price_position = get_price_position(figi, table_name)
                 now_case = ('SELL', last_price, x_time.replace(microsecond=0))
                 result_analyze_events = analyze_events(figi, now_case)
                 pp_long = result_analyze_events[0]
@@ -316,14 +322,13 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 trend_near = result_analyze_events[5]
 
                 events_list.append(
-                    (ticker, sell_case, figi, 'SELL', last_price, round(price_position, 3), round(pp_long, 3),
+                    (ticker, sell_case, figi, 'SELL', last_price, round(price_position_days, 3), round(pp_long, 3),
                      deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
 
                 data2sql.events_list2sql(events_list)
 
         if buy_strength >= 2:
             if check_last_event(figi, 'BUY', buy_case, last_price, x_time):
-                price_position = get_price_position(figi, table_name)
                 now_case = ('BUY', last_price, x_time.replace(microsecond=0))
                 result_analyze_events = analyze_events(figi, now_case)
                 pp_short = result_analyze_events[1]
@@ -332,7 +337,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 trend_near = result_analyze_events[5]
 
                 events_list.append(
-                    (ticker, buy_case, figi, 'BUY', last_price, round(price_position, 3), round(pp_short, 3),
+                    (ticker, buy_case, figi, 'BUY', last_price, round(price_position_days, 3), round(pp_short, 3),
                      deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
 
                 data2sql.events_list2sql(events_list)

@@ -59,7 +59,8 @@ def create_candles(table_name):
 def create_control_list():
     cursor.execute("CREATE TABLE control_list (ticker VARCHAR(50),"
                    "start_direction VARCHAR(50), start_price NUMERIC, target_price NUMERIC,"
-                   "loss_percent NUMERIC, price_change_percent NUMERIC, stop_loss NUMERIC)")
+                   "loss_percent NUMERIC, price_change_percent NUMERIC, stop_loss NUMERIC,"
+                   "price_start_position_hours NUMERIC, price_position_days NUMERIC, lots_qnt NUMERIC)")
 
     return
 
