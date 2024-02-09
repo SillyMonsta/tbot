@@ -286,10 +286,11 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
         ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
         manual_set = sql2data.share_from_control_list_by_ticker(ticker)
+        #if ticker == 'NVTK' or ticker == 'SBER': print(manual_set)
         if manual_set:
             start_price = manual_set[0][2]
-            max_hi_hours = max(hi)
-            min_lo_hours = min(lo)
+            max_hi_hours = Decimal(max(hi))
+            min_lo_hours = Decimal(min(lo))
             price_change_percent = (max_hi_hours - min_lo_hours) / max_hi_hours / 2
             price_start_position_hours = (start_price / (max_hi_hours - min_lo_hours)) - \
                                          (min_lo_hours / (max_hi_hours - min_lo_hours))

@@ -303,6 +303,6 @@ def stream_connection(figi_list):
         #    write2file.write(str(datetime.datetime.now())[:19] +
         #                     ' requests.py --> stream_connection --> Exception: '
         #                     + str(e), 'log.txt')
-            figi_list = action.prepare_stream_connection()
-            time.sleep(10)
-            stream_connection(figi_list)
+        #    figi_list = action.prepare_stream_connection()
+        #    time.sleep(10)
+        #    stream_connection(figi_list)
