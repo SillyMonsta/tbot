@@ -65,6 +65,16 @@ def create_control_list():
     return
 
 
+def create_analyzed_shares():
+    cursor.execute("CREATE TABLE analyzed_shares (figi VARCHAR(50), ticker VARCHAR(50), profit NUMERIC,"
+                   "start_time TIMESTAMPTZ, start_direction VARCHAR(50), start_case TEXT, start_price NUMERIC,"
+                   "price NUMERIC, target_price NUMERIC, loss_price NUMERIC, loss_percent NUMERIC,"
+                   "target_percent NUMERIC, position_hours NUMERIC, position_days NUMERIC)")
+    cursor.execute("""CREATE UNIQUE INDEX analyzed_shares_figi_idx ON public.analyzed_shares USING btree (figi)""")
+
+    return
+
+
 def create_orders_history():
     cursor.execute("CREATE TABLE orders_history (ticker VARCHAR(50), "
                    "figi VARCHAR(50), direction VARCHAR(50), price NUMERIC,"
@@ -154,7 +164,7 @@ def get_last_price(figi):
             ) subquery
             ORDER BY candle_time DESC LIMIT 1
             '''
-    cursor.execute(query, (figi, ))
+    cursor.execute(query, (figi,))
     result = cursor.fetchall()
     return result
 
@@ -215,9 +225,30 @@ def get_info_by_figi(table_name, column_name, figi):
     return results
 
 
+def get_info_by_ticker(table_name, column_name, ticker):
+    query = f'''SELECT {column_name} FROM {table_name} WHERE ticker = %s'''
+    cursor.execute(query, (ticker,))
+    results = cursor.fetchall()
+    return results
+
+
 def share_from_control_list_by_ticker(ticker):
     query = f'''SELECT * FROM control_list WHERE ticker = %s'''
     cursor.execute(query, (ticker,))
+    results = cursor.fetchall()
+    return results
+
+
+def analyzed_share_by_figi(figi):
+    query = '''SELECT * FROM analyzed_shares WHERE figi = %s'''
+    cursor.execute(query, (figi,))
+    results = cursor.fetchall()
+    return results
+
+
+def tickers_from_control_list():
+    query = f'''SELECT ticker FROM control_list'''
+    cursor.execute(query, )
     results = cursor.fetchall()
     return results
 

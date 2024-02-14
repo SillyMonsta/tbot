@@ -252,11 +252,10 @@ def stream_connection(figi_list):
     write2file.write(str(datetime.datetime.now())[:19] + ' START stream_connection', 'log.txt')
 
     def request_iterator():
-        for figi in figi_list:
-            yield MarketDataRequest(
-                subscribe_trades_request=SubscribeTradesRequest(
-                    subscription_action=SubscriptionAction.SUBSCRIPTION_ACTION_SUBSCRIBE,
-                    instruments=[TradeInstrument(figi=figi, )], ))
+        yield MarketDataRequest(
+            subscribe_trades_request=SubscribeTradesRequest(
+                subscription_action=SubscriptionAction.SUBSCRIPTION_ACTION_SUBSCRIBE,
+                instruments=[TradeInstrument(figi=figi, ) for figi in figi_list]))
         while True:
             time.sleep(1)
 
@@ -264,9 +263,8 @@ def stream_connection(figi_list):
     trades2candles_list = []
     with Client(TOKEN) as client:
         #try:
-
         for marketdata in client.market_data_stream.market_data_stream(request_iterator()):
-            if marketdata.trade is not None:
+            if marketdata.trade:
                 price = units_nano_merge(marketdata.trade.price.units, marketdata.trade.price.nano)
                 # формируем данные для запроса sql по обновлению свечек для двух интервалов
                 for x in [4, 5]:

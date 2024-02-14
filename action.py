@@ -11,6 +11,12 @@ from datetime import timedelta
 import write2file
 
 
+def make_multiple(num, divisor):
+    result = (num // divisor) * divisor
+    decimals = len(str(divisor).split('.')[1]) if '.' in str(divisor) else 0
+    return Decimal(round(result, decimals))
+
+
 def get_price_position(figi, table_name):
     # запрос дневных свечек за полгода для определения price_position
     candles_1day = sql2data.get_day_candles(figi, table_name)
@@ -92,8 +98,8 @@ def prepare_stream_connection():
     # проверяем есть ли в базе данных таблица balances если нет, то создаем
     if sql2data.is_table_exist('balances') is False:
         sql2data.create_balances()
-    if sql2data.is_table_exist('control_list') is False:
-        sql2data.create_control_list()
+    if sql2data.is_table_exist('analyzed_shares') is False:
+        sql2data.create_analyzed_shares()
     # проверяем есть ли в базе данных таблица candles если нет, то создаем
     if sql2data.is_table_exist('candles') is False:
         sql2data.create_candles('candles')
@@ -102,22 +108,9 @@ def prepare_stream_connection():
     else:
         # если пид не ноль значит остановка была нештатной, надо проверить свечи
         if sql2data.pid_from_sql('stream_connection'):
-            try:
-                # проверяем дату последней свечи в таблице, что-бы понять сколько нужно исторических свеч
-                date_last_candle = sql2data.get_last_candle_attribute('candles', 'candle_time')[0][0]
-                seconds_from_last_candle = (
-                        now() - datetime.datetime.fromisoformat(str(date_last_candle))).total_seconds()
-                hours_from_last_candle = seconds_from_last_candle / 3600
-                # если 7 утра или понедельник и прошло 15 часов или 63 обнуляем days_from_last_candle
-                if (abs(hours_from_last_candle - 15) < 0.1 and int(now().hour) == 7) \
-                        or (abs(hours_from_last_candle - 63) < 0.1 and int(now().weekday()) == 0):
-                    days_from_last_candle = 0
-                else:
-                    days_from_last_candle = seconds_from_last_candle / 86400
-                history_candle_days = [0, days_from_last_candle, days_from_last_candle]
-            except IndexError:
-                history_candle_days = [0, 8, 240]
-        # если пид ноль значит стрим был остановлен штатно, свечи не проверяем
+            history_candle_days = [0, 8, 240]
+            data2sql.update_pid('stream_connection', 0)
+        # иначе, если пид ноль значит стрим был остановлен штатно, свечи не проверяем
         else:
             history_candle_days = [0, 0, 0]
 
@@ -133,59 +126,107 @@ def prepare_stream_connection():
     return figi_list
 
 
-def test_trade(manual_set, direction, last_price, case):
-    ticker = manual_set[0][0]
-    start_direction = manual_set[0][1]
-    loss_percent = manual_set[0][4]
-    if direction != start_direction:
-        data2sql.update_control_list(ticker, 'start_direction', direction)
-        data2sql.update_control_list(ticker, 'start_price', last_price)
-        if direction == 'BUY':
-            value = last_price - last_price * loss_percent / 100
+def check_and_trade(figi, direction, last_price, case, x_time, max_hi_hours, min_lo_hours, table_name):
+    if check_last_event(figi, direction, case, last_price, x_time):
+        ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
+        min_price_increment = sql2data.get_info_by_figi('shares', 'min_price_increment', figi)[0][0]
+
+        start_time = x_time.replace(microsecond=0)
+
+        start_position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
+                               (min_lo_hours / (max_hi_hours - min_lo_hours))
+
+        position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
+                         (min_lo_hours / (max_hi_hours - min_lo_hours))
+        position_days = get_price_position(figi, table_name)
+
+        now_case = (direction, last_price, start_time)
+        result_analyze_events = analyze_events(figi, now_case)
+        if direction == 'SELL':
+            profit = result_analyze_events[0]
+            target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
+            loss_percent = None
+            loss_price = None
         else:
-            value = last_price + last_price * loss_percent / 100
-        data2sql.update_control_list(ticker, 'stop_loss', value)
-        # отправляем в лог
-        write2file.write(str(datetime.datetime.now())[:19] + ' ' + str(ticker) + ' ' + direction + ' '
-                         + str(last_price) + ' ' + case, 'log.txt')
-    return
+            profit = result_analyze_events[1]
+            target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
+            loss_percent = Decimal(0.08)
+            loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
+
+        deal_qnt = result_analyze_events[2]
+        trend_far = result_analyze_events[3]
+        trend_near = result_analyze_events[5]
+
+        target_price = make_multiple(last_price + last_price * target_percent, min_price_increment)
+
+        price_position_days = get_price_position(figi, table_name)
+
+        data2sql.events_list2sql([(ticker, case, figi, direction, last_price, round(price_position_days, 3),
+                                   round(profit, 3), deal_qnt, round(trend_near, 3), round(trend_far, 3),
+                                   start_time)])
+
+        data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, direction, case, last_price,
+                                       last_price, target_price, loss_price, loss_percent, target_percent,
+                                       position_hours, position_days)])
+
+        trade = True
+    else:
+        trade = False
+
+    return trade
 
 
-def check_stop_loss(manual_set, last_price, price_change_percent):
-    ticker = manual_set[0][0]
-    start_direction = manual_set[0][1]
-    start_price = manual_set[0][2]
-    target_price = manual_set[0][3]
-    loss_percent = manual_set[0][4]
-    stop_loss = manual_set[0][5]
+def analyse_ohlcv(ohlcv):
+    rsi = TA.RSI(ohlcv)
+    ef = TA.EFI(ohlcv)
+    roc = TA.ROC(ohlcv, 4)
+    pb = TA.PERCENT_B(ohlcv)
+    max_ef = numpy.nanmax(ef)
+    min_ef = numpy.nanmin(ef)
+    prev_ef = ef[len(ef) - 2]
+    last_ef = ef[len(ef) - 1]
+    last_rsi = rsi[len(ef) - 1]
+    last_pb = pb[len(pb) - 1]
+    prev_roc = roc[len(roc) - 2]
+    last_roc = roc[len(roc) - 1]
+    try:
+        if last_roc != 0 and prev_roc != 0:
+            dif_roc = (last_roc - prev_roc) / last_roc
+        else:
+            dif_roc = 0
+    except TypeError:
+        dif_roc = 0
 
-    sell_case = False
-    buy_case = False
+    sell_strength = 0
+    buy_strength = 0
+    sell_case = ''
+    buy_case = ''
 
-    # если цена поднялась выше порога
-    if start_price:
-        if (last_price - start_price) / last_price > price_change_percent / 100:
-            sell_case = True
-        # если цена опустилась ниже порога
-        if (start_price - last_price) / start_price > price_change_percent / 100:
-            buy_case = True
+    if last_pb > 1:
+        sell_strength += 1
+        sell_case = sell_case + ' PB>1'
 
-    # если был BUY то ожидаем SELL
-    if start_direction == 'BUY':
-        if last_price <= stop_loss:
-            test_trade(manual_set, 'SELL', last_price, 'stop_loss')
-        elif (last_price - stop_loss) / last_price > loss_percent / 100:
-            value = last_price - last_price * loss_percent / 100
-            data2sql.update_control_list(ticker, 'stop_loss', value)
-    # если был SELL то ожидаем BUY
-    if start_direction == 'SELL':
-        # if last_price >= stop_loss:
-        #    test_trade(manual_set, 'BUY', last_price, 'stop_loss')
-        if (stop_loss - last_price) / stop_loss > loss_percent / 100:
-            value = last_price + last_price * loss_percent / 100
-            data2sql.update_control_list(ticker, 'stop_loss', value)
+    if (last_ef - prev_ef < 0 and prev_ef >= max_ef * 0.7) and last_rsi > 70:
+        sell_strength += 1
+        sell_case = sell_case + ' maxEF&RSI'
 
-    return sell_case, buy_case
+    if dif_roc > 1:
+        sell_strength += 1
+        sell_case = sell_case + ' difROC>1'
+
+    if last_pb < 0:
+        buy_strength += 1
+        buy_case = buy_case + ' PB<0'
+
+    if (0 < last_ef - prev_ef and prev_ef <= min_ef * 0.7) and last_rsi < 30:
+        buy_strength += 1
+        buy_case = buy_case + ' minEF&RSI'
+
+    if dif_roc < -1:
+        buy_strength += 1
+        buy_case = buy_case + ' difROC<-1'
+
+    return sell_strength, buy_strength, sell_case, buy_case
 
 
 def analyze_candles(figi, events_extraction_case, x_time, table_name):
@@ -223,7 +264,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 cl[-1] = float(new_candle[2])
                 vo[-1] = float(new_candle[3])
 
-        # last_price = Decimal(cl[-1])
         last_price = candles[-1][3]
 
         dict_ohlcv = {
@@ -235,114 +275,77 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
         }
         ohlcv = pd.DataFrame(data=dict_ohlcv)
 
-        rsi = TA.RSI(ohlcv)
-        ef = TA.EFI(ohlcv)
-        roc = TA.ROC(ohlcv, 4)
-        pb = TA.PERCENT_B(ohlcv)
-        max_ef = numpy.nanmax(ef)
-        min_ef = numpy.nanmin(ef)
-        prev_ef = ef[len(ef) - 2]
-        last_ef = ef[len(ef) - 1]
-        last_rsi = rsi[len(ef) - 1]
-        last_pb = pb[len(pb) - 1]
-        prev_roc = roc[len(roc) - 2]
-        last_roc = roc[len(roc) - 1]
-        try:
-            if last_roc != 0 and prev_roc != 0:
-                dif_roc = (last_roc - prev_roc) / last_roc
+        strength_case = analyse_ohlcv(ohlcv)
+        sell_strength = strength_case[0]
+        buy_strength = strength_case[1]
+        sell_case = strength_case[2]
+        buy_case = strength_case[3]
+
+        max_hi_hours = Decimal(max(hi))
+        min_lo_hours = Decimal(min(lo))
+
+        analyzed_share = sql2data.analyzed_share_by_figi(figi)
+
+        if analyzed_share:
+            min_price_increment = sql2data.get_info_by_figi('shares', 'min_price_increment', figi)[0][0]
+            sold = False
+
+            ticker = analyzed_share[0][1]
+            profit = analyzed_share[0][2]
+            start_time = analyzed_share[0][3]
+            start_direction = analyzed_share[0][4]
+            start_case = analyzed_share[0][5]
+            start_price = analyzed_share[0][6]
+            loss_price = analyzed_share[0][9]
+
+            start_position_hours = (start_price / (max_hi_hours - min_lo_hours)) - \
+                                   (min_lo_hours / (max_hi_hours - min_lo_hours))
+
+            position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
+                             (min_lo_hours / (max_hi_hours - min_lo_hours))
+            position_days = get_price_position(figi, table_name)
+
+            # если был BUY то ожидаем SELL
+            if start_direction == 'BUY':
+                loss_percent = Decimal(0.08)
+                target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
+                if last_price <= loss_price:
+                    sold = check_and_trade(figi, 'SELL', last_price, 'STOP_LOSS', x_time, max_hi_hours,
+                                           min_lo_hours, table_name)
+                    if sold and sell_strength >= 2:
+                        sell_strength = 0
+                elif (last_price - loss_price) / last_price > loss_percent:
+                    loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
             else:
-                dif_roc = 0
-        except TypeError:
-            dif_roc = 0
+                target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
+                loss_percent = None
+                loss_price = None
 
-        sell_strength = 0
-        buy_strength = 0
-        sell_case = ''
-        buy_case = ''
+            target_price = make_multiple(start_price + last_price * target_percent, min_price_increment)
 
-        if last_pb > 1:
-            sell_strength += 1
-            sell_case = sell_case + ' PB>1'
-
-        if (last_ef - prev_ef < 0 and prev_ef >= max_ef * 0.7) and last_rsi > 70:
-            sell_strength += 1
-            sell_case = sell_case + ' maxEF&RSI'
-
-        if dif_roc > 1:
-            sell_strength += 1
-            sell_case = sell_case + ' difROC>1'
-
-        if last_pb < 0:
-            buy_strength += 1
-            buy_case = buy_case + ' PB<0'
-
-        if (0 < last_ef - prev_ef and prev_ef <= min_ef * 0.7) and last_rsi < 30:
-            buy_strength += 1
-            buy_case = buy_case + ' minEF&RSI'
-
-        if dif_roc < -1:
-            buy_strength += 1
-            buy_case = buy_case + ' difROC<-1'
-
-        ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
-        manual_set = sql2data.share_from_control_list_by_ticker(ticker)
-        #if ticker == 'NVTK' or ticker == 'SBER': print(manual_set)
-        if manual_set:
-            start_price = manual_set[0][2]
-            max_hi_hours = Decimal(max(hi))
-            min_lo_hours = Decimal(min(lo))
-            price_change_percent = (max_hi_hours - min_lo_hours) / max_hi_hours / 2
-            price_start_position_hours = (start_price / (max_hi_hours - min_lo_hours)) - \
-                                         (min_lo_hours / (max_hi_hours - min_lo_hours))
-            price_position_days = get_price_position(figi, table_name)
-            data2sql.update_control_list(ticker, 'price_change_percent', price_change_percent)
-            data2sql.update_control_list(ticker, 'price_start_position_hours', price_start_position_hours)
-            data2sql.update_control_list(ticker, 'price_position_days', price_position_days)
-            result_check_stop_loss = check_stop_loss(manual_set, last_price, price_change_percent)
             # если цена поднялась выше порога
-            if result_check_stop_loss[0]:
+            if last_price > target_price:
+                sell_case = sell_case + ' target<'
                 sell_strength += 1
-                sell_case = sell_case + ' Price>'
+                if sell_strength >= 2:
+                    sold = check_and_trade(figi, 'SELL', last_price, sell_case, x_time, max_hi_hours,
+                                           min_lo_hours, table_name)
             # если цена опустилась ниже порога
-            if result_check_stop_loss[1]:
+            if last_price < target_price:
+                buy_case = buy_case + ' target>'
                 buy_strength += 1
-                buy_case = buy_case + ' Price<'
-
+                if buy_strength >= 2:
+                    sold = check_and_trade(figi, 'BUY', last_price, buy_case, x_time, max_hi_hours,
+                                           min_lo_hours, table_name)
+            if sold is False:
+                data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, start_direction, start_case,
+                                               start_price, last_price, target_price, loss_price, loss_percent,
+                                               target_percent, position_hours, position_days)])
+        else:
             if sell_strength >= 2:
-                test_trade(manual_set, 'SELL', last_price, sell_case)
+                check_and_trade(figi, 'SELL', last_price, sell_case, x_time, max_hi_hours, min_lo_hours, table_name)
             if buy_strength >= 2:
-                test_trade(manual_set, 'BUY', last_price, buy_case)
-
-        if sell_strength >= 2:
-            if check_last_event(figi, 'SELL', sell_case, last_price, x_time):
-                now_case = ('SELL', last_price, x_time.replace(microsecond=0))
-                result_analyze_events = analyze_events(figi, now_case)
-                pp_long = result_analyze_events[0]
-                deal_qnt = result_analyze_events[2]
-                trend_far = result_analyze_events[3]
-                trend_near = result_analyze_events[5]
-                price_position_days = get_price_position(figi, table_name)
-                events_list.append(
-                    (ticker, sell_case, figi, 'SELL', last_price, round(price_position_days, 3), round(pp_long, 3),
-                     deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
-
-                data2sql.events_list2sql(events_list)
-
-        if buy_strength >= 2:
-            if check_last_event(figi, 'BUY', buy_case, last_price, x_time):
-                now_case = ('BUY', last_price, x_time.replace(microsecond=0))
-                result_analyze_events = analyze_events(figi, now_case)
-                pp_short = result_analyze_events[1]
-                deal_qnt = result_analyze_events[2]
-                trend_far = result_analyze_events[3]
-                trend_near = result_analyze_events[5]
-                price_position_days = get_price_position(figi, table_name)
-                events_list.append(
-                    (ticker, buy_case, figi, 'BUY', last_price, round(price_position_days, 3), round(pp_short, 3),
-                     deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time.replace(microsecond=0)))
-
-                data2sql.events_list2sql(events_list)
-
+                check_and_trade(figi, 'BUY', last_price, buy_case, x_time, max_hi_hours, min_lo_hours, table_name)
     return
 
 

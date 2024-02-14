@@ -47,6 +47,30 @@ def update_control_list(ticker, column_name, value):
     connection.commit()
 
 
+def analyzed_shares2sql(analyzed_shares_list):
+    query = f"""
+        INSERT INTO analyzed_shares (figi, ticker, profit, start_time, start_direction, start_case, start_price, 
+        price, target_price, loss_price, loss_percent, target_percent, position_hours, position_days)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT(figi) DO UPDATE SET
+                profit = EXCLUDED.profit,
+                start_time = EXCLUDED.start_time,
+                start_direction = EXCLUDED.start_direction,
+                start_case = EXCLUDED.start_case,
+                start_price = EXCLUDED.start_price,
+                price = EXCLUDED.price,
+                target_price = EXCLUDED.target_price,
+                loss_price = EXCLUDED.loss_price,
+                loss_percent = EXCLUDED.loss_percent,
+                target_percent = EXCLUDED.target_percent,
+                position_hours = EXCLUDED.position_hours,
+                position_days = EXCLUDED.position_days
+        """
+    cursor.executemany(query, analyzed_shares_list)
+    connection.commit()
+    return
+
+
 def shares2sql(shares_list):
     query = f"""
         INSERT INTO shares (figi, ticker, lot, currency, instrument_name, exchange, sector, trading_status, 
@@ -158,16 +182,3 @@ def events_list2sql(events_list):
     return
 
 
-#def last_event_update2sql(pp_long, pp_short, deal_qnt, trend):
-#    cursor.execute("SELECT MAX(event_time) FROM events_list")
-#    max_event_time = cursor.fetchone()[0]
-    #query = '''UPDATE events_list
-    #            SET
-    #            pp_long = %s,
-    #            pp_short = %s,
-    #            deal_qnt = %s,
-    #            trend = %s
-    #            WHERE event_time = %s'''
-    #cursor.execute(query, (pp_long, pp_short, deal_qnt, trend, max_event_time))
-    #connection.commit()
-    #return
