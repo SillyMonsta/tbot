@@ -361,6 +361,8 @@ def analyze_events(figi, now_case):
     deal_qnt = 0
     pp_long = 0  # pseudo_profit_long
     pp_short = 0  # pseudo_profit_short
+    ave_pp_short = 0
+    ave_pp_long = 0
     if list_dir_price_time:
         prev_direction = list_dir_price_time[0][0]
         list_cases = []
@@ -413,7 +415,8 @@ def analyze_events(figi, now_case):
         if profit_long_list:
             pp_long = profit_long_list[-1]
             ave_pp_long = sum(profit_long_list) / len(profit_long_list)
-        average_profit = (ave_pp_short + ave_pp_long) / 2
+
+    average_profit = (ave_pp_short + ave_pp_long) / 2
 
     near_trend = (last_prices_same_dir[-1] - last_prices_same_dir[0]) / last_prices_same_dir[-1]
 
