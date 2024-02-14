@@ -109,7 +109,6 @@ def prepare_stream_connection():
         # если пид не ноль значит остановка была нештатной, надо проверить свечи
         if sql2data.pid_from_sql('stream_connection'):
             history_candle_days = [0, 8, 240]
-            data2sql.update_pid('stream_connection', 0)
         # иначе, если пид ноль значит стрим был остановлен штатно, свечи не проверяем
         else:
             history_candle_days = [0, 0, 0]
@@ -142,6 +141,7 @@ def check_and_trade(figi, direction, last_price, case, x_time, max_hi_hours, min
 
         now_case = (direction, last_price, start_time)
         result_analyze_events = analyze_events(figi, now_case)
+        average_profit = result_analyze_events[6]
         if direction == 'SELL':
             profit = result_analyze_events[0]
             target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
@@ -165,7 +165,7 @@ def check_and_trade(figi, direction, last_price, case, x_time, max_hi_hours, min
                                    round(profit, 3), deal_qnt, round(trend_near, 3), round(trend_far, 3),
                                    start_time)])
 
-        data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, direction, case, last_price,
+        data2sql.analyzed_shares2sql([(figi, ticker, average_profit, start_time, direction, case, last_price,
                                        last_price, target_price, loss_price, loss_percent, target_percent,
                                        position_hours, position_days)])
 
@@ -409,14 +409,15 @@ def analyze_events(figi, now_case):
 
         if profit_short_list:
             pp_short = profit_short_list[-1]
-            # pp_short = sum(profit_short_list) / len(profit_short_list)
+            ave_pp_short = sum(profit_short_list) / len(profit_short_list)
         if profit_long_list:
             pp_long = profit_long_list[-1]
-            # pp_long = sum(profit_long_list) / len(profit_long_list)
+            ave_pp_long = sum(profit_long_list) / len(profit_long_list)
+        average_profit = (ave_pp_short + ave_pp_long) / 2
 
     near_trend = (last_prices_same_dir[-1] - last_prices_same_dir[0]) / last_prices_same_dir[-1]
 
-    return pp_long, pp_short, deal_qnt, trend, periodicity, near_trend
+    return pp_long, pp_short, deal_qnt, trend, periodicity, near_trend, average_profit
 
 
 def prepare_events_extraction():
