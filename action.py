@@ -181,12 +181,16 @@ def analyse_ohlcv(ohlcv):
     ef = TA.EFI(ohlcv)
     roc = TA.ROC(ohlcv, 4)
     pb = TA.PERCENT_B(ohlcv)
+    bbw = TA.BBWIDTH(ohlcv)
     max_ef = numpy.nanmax(ef)
     min_ef = numpy.nanmin(ef)
     prev_ef = ef[len(ef) - 2]
     last_ef = ef[len(ef) - 1]
     last_rsi = rsi[len(ef) - 1]
     last_pb = pb[len(pb) - 1]
+    last_bbw = bbw[len(pb) - 1]
+    max_bbw = numpy.nanmax(bbw)
+    min_bbw = numpy.nanmin(bbw)
     prev_roc = roc[len(roc) - 2]
     last_roc = roc[len(roc) - 1]
     try:
@@ -226,7 +230,9 @@ def analyse_ohlcv(ohlcv):
         buy_strength += 1
         buy_case = buy_case + ' difROC<-1'
 
-    return sell_strength, buy_strength, sell_case, buy_case
+    position_bbw = (last_bbw / (max_bbw - min_bbw)) - (min_bbw / (max_bbw - min_bbw))
+
+    return sell_strength, buy_strength, sell_case, buy_case, last_bbw, position_bbw
 
 
 def analyze_candles(figi, events_extraction_case, x_time, table_name):
@@ -307,6 +313,17 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
+
+            bbw = strength_case[4]
+            position_bbw = strength_case[5]
+
+            if position_bbw < 0.01:
+                write2file.write(str(datetime.datetime.now())[:19] + ' position_bbw<0.01 ' + ticker + ' ' +
+                                 str(last_price) + '    position_bbw: ' +
+                                 str(round(position_bbw, 3)), 'log.txt')
+            if bbw < 0.01:
+                write2file.write(str(datetime.datetime.now())[:19] + ' bbw<0.01 ' + ticker + ' ' +
+                                 str(last_price) + '    bbw: ' + str(round(bbw, 3)), 'log.txt')
 
             if prev_position_hours == 1:
                 if position_hours < Decimal(0.99):
