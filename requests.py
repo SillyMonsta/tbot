@@ -301,6 +301,10 @@ def stream_connection(figi_list):
             write2file.write(str(datetime.datetime.now())[:19] +
                              ' requests.py --> stream_connection --> Exception: '
                              + str(e), 'log.txt')
-            figi_list = action.prepare_stream_connection()
+            # формируем список всех акций
+            shares = sql2data.shares_from_sql()
+            figi_list = []
+            for figi_row in shares:
+                figi_list.append(figi_row[0])
             time.sleep(10)
             stream_connection(figi_list)
