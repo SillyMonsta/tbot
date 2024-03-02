@@ -326,7 +326,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             #                     str(last_price) + '    bbw: ' + str(bbw), 'log.txt')
 
             if prev_position_hours == 1:
-                if position_hours < Decimal(0.99):
+                if position_hours < Decimal(0.98):
+                    sell_strength += 1
+                    sell_case = sell_case + ' hours_rvrs'
                     write2file.write(str(datetime.datetime.now())[:19] + ' SELL ' + ticker + ' ' + str(last_price) +
                                      ' position_hours: ' + str(round(position_hours, 3)) +
                                      ' prev_position_hours: ' + str(round(prev_position_hours, 3)), 'log.txt')
@@ -334,7 +336,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                     position_hours = Decimal(1)
 
             if prev_position_days == 1:
-                if position_days < Decimal(0.99):
+                if position_days < Decimal(0.98):
+                    sell_strength += 1
+                    sell_case = sell_case + ' days_rvrs'
                     write2file.write(str(datetime.datetime.now())[:19] + ' SELL ' + ticker + ' ' + str(last_price) +
                                      ' position_days: ' + str(round(position_days, 3)) +
                                      ' prev_position_days: ' + str(round(prev_position_days, 3)), 'log.txt')
@@ -342,7 +346,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                     position_days = Decimal(1)
 
             if prev_position_hours == 0:
-                if position_hours > Decimal(0.01):
+                if position_hours > Decimal(0.02):
+                    buy_strength += 1
+                    buy_case = buy_case + ' hours_rvrs'
                     write2file.write(str(datetime.datetime.now())[:19] + ' BUY ' + ticker + ' ' + str(last_price) +
                                      ' position_hours: ' + str(round(position_hours, 3)) +
                                      ' prev_position_hours: ' + str(round(prev_position_hours, 3)), 'log.txt')
@@ -350,7 +356,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                     position_hours = 0
 
             if prev_position_days == 0:
-                if position_days > Decimal(0.01):
+                if position_days > Decimal(0.02):
+                    buy_strength += 1
+                    buy_case = buy_case + ' days_rvrs'
                     write2file.write(str(datetime.datetime.now())[:19] + ' BUY ' + ticker + ' ' + str(last_price) +
                                      ' position_days: ' + str(round(position_days, 3)) +
                                      ' prev_position_days: ' + str(round(prev_position_days, 3)), 'log.txt')
