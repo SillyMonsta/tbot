@@ -132,9 +132,6 @@ def check_and_trade(figi, direction, last_price, case, x_time, max_hi_hours, min
 
         start_time = x_time.replace(microsecond=0)
 
-        #start_position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
-        #                       (min_lo_hours / (max_hi_hours - min_lo_hours))
-
         position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
                          (min_lo_hours / (max_hi_hours - min_lo_hours))
         position_days = get_price_position(figi, table_name)
@@ -181,16 +178,12 @@ def analyse_ohlcv(ohlcv):
     ef = TA.EFI(ohlcv)
     roc = TA.ROC(ohlcv, 4)
     pb = TA.PERCENT_B(ohlcv)
-    #bbw = TA.BBWIDTH(ohlcv)
     max_ef = numpy.nanmax(ef)
     min_ef = numpy.nanmin(ef)
     prev_ef = ef[len(ef) - 2]
     last_ef = ef[len(ef) - 1]
     last_rsi = rsi[len(ef) - 1]
     last_pb = pb[len(pb) - 1]
-    #last_bbw = bbw[len(pb) - 1]
-    #max_bbw = numpy.nanmax(bbw)
-    #min_bbw = numpy.nanmin(bbw)
     prev_roc = roc[len(roc) - 2]
     last_roc = roc[len(roc) - 1]
     try:
@@ -230,14 +223,11 @@ def analyse_ohlcv(ohlcv):
         buy_strength += 1
         buy_case = buy_case + ' difROC<-1'
 
-    #position_bbw = (last_bbw / (max_bbw - min_bbw)) - (min_bbw / (max_bbw - min_bbw))
-
-    return sell_strength, buy_strength, sell_case, buy_case #, last_bbw, position_bbw
+    return sell_strength, buy_strength, sell_case, buy_case, dif_roc
 
 
 def analyze_candles(figi, events_extraction_case, x_time, table_name):
     candles = sql2data.candles_to_finta(figi, x_time, table_name)
-    events_list = []
     op = []
     hi = []
     lo = []
@@ -286,6 +276,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
         buy_strength = strength_case[1]
         sell_case = strength_case[2]
         buy_case = strength_case[3]
+        dif_roc = strength_case[4]
 
         max_hi_hours = Decimal(max(hi))
         min_lo_hours = Decimal(min(lo))
@@ -303,76 +294,42 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             start_case = analyzed_share[0][5]
             start_price = analyzed_share[0][6]
             loss_price = analyzed_share[0][9]
-
-            prev_position_hours = analyzed_share[0][12]
+            loss_percent = analyzed_share[0][10]
             prev_position_days = analyzed_share[0][13]
-
-            #start_position_hours = (start_price / (max_hi_hours - min_lo_hours)) - \
-            #                       (min_lo_hours / (max_hi_hours - min_lo_hours))
 
             position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
 
-            #bbw = strength_case[4]
-            #position_bbw = strength_case[5]
+            # тест - мониторить значения dif_roc выше 1 или ниже -1 с записью в лог
+            if dif_roc > 1 or dif_roc < -1:
+                write2file.write(str(datetime.datetime.now())[:19] + ticker + ' dif_roc ' + str(dif_roc), 'log.txt')
 
-            #if position_bbw < 0.01:
-            #    write2file.write(str(datetime.datetime.now())[:19] + ' position_bbw<0.01 ' + ticker + ' ' +
-            #                     str(last_price) + '    position_bbw: ' +
-            #                     str(position_bbw), 'log.txt')
-            #if bbw < 0.01:
-            #    write2file.write(str(datetime.datetime.now())[:19] + ' bbw<0.01 ' + ticker + ' ' +
-            #                     str(last_price) + '    bbw: ' + str(bbw), 'log.txt')
-
-            if prev_position_hours == 1:
-                if position_hours < Decimal(0.98):
-                    sell_strength += 1
-                    sell_case = sell_case + ' hours_rvrs'
-                    write2file.write(str(datetime.datetime.now())[:19] + ' SELL ' + ticker + ' ' + str(last_price) +
-                                     ' position_hours: ' + str(round(position_hours, 3)) +
-                                     ' prev_position_hours: ' + str(round(prev_position_hours, 3)), 'log.txt')
-                else:
-                    position_hours = Decimal(1)
-
+            # когда рост на масштабе дней развернулся
             if prev_position_days == 1:
                 if position_days < Decimal(0.98):
                     sell_strength += 1
                     sell_case = sell_case + ' days_rvrs'
-                    write2file.write(str(datetime.datetime.now())[:19] + ' SELL ' + ticker + ' ' + str(last_price) +
-                                     ' position_days: ' + str(round(position_days, 3)) +
-                                     ' prev_position_days: ' + str(round(prev_position_days, 3)), 'log.txt')
+                    #write2file.write(str(datetime.datetime.now())[:19] + ' SELL ' + ticker + ' ' + str(last_price) +
+                                     #' position_days: ' + str(round(position_days, 3)) +
+                                     #' prev_position_days: ' + str(round(prev_position_days, 3)), 'log.txt')
                 else:
                     position_days = Decimal(1)
-
-            if prev_position_hours == 0:
-                if position_hours > Decimal(0.02):
-                    buy_strength += 1
-                    buy_case = buy_case + ' hours_rvrs'
-                    write2file.write(str(datetime.datetime.now())[:19] + ' BUY ' + ticker + ' ' + str(last_price) +
-                                     ' position_hours: ' + str(round(position_hours, 3)) +
-                                     ' prev_position_hours: ' + str(round(prev_position_hours, 3)), 'log.txt')
-                else:
-                    position_hours = 0
-
+            # когда падение на масштабе дней развернулось
             if prev_position_days == 0:
                 if position_days > Decimal(0.02):
                     buy_strength += 1
                     buy_case = buy_case + ' days_rvrs'
-                    write2file.write(str(datetime.datetime.now())[:19] + ' BUY ' + ticker + ' ' + str(last_price) +
-                                     ' position_days: ' + str(round(position_days, 3)) +
-                                     ' prev_position_days: ' + str(round(prev_position_days, 3)), 'log.txt')
+                    #write2file.write(str(datetime.datetime.now())[:19] + ' BUY ' + ticker + ' ' + str(last_price) +
+                                     #' position_days: ' + str(round(position_days, 3)) +
+                                     #' prev_position_days: ' + str(round(prev_position_days, 3)), 'log.txt')
                 else:
                     position_days = 0
 
-            #if position_hours == 1 or position_days == 1 or position_hours == 0 or position_days == 0:
-            #    write2file.write(str(datetime.datetime.now())[:19] + ' ' + ticker + ' ' + str(last_price) +
-            #                     ' position_hours: ' + str(round(position_hours, 3)) +
-            #                     ' position_days: ' + str(round(position_days, 3)), 'log.txt')
-
-            # если был BUY то ожидаем SELL
+            # если был BUY то определяем loss_price и loss_percent
             if start_direction == 'BUY':
-                loss_percent = Decimal(0.08)
+                if loss_percent is None:
+                    loss_percent = Decimal(0.08)
                 target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
                 if last_price <= loss_price:
                     sold = check_and_trade(figi, 'SELL', last_price, 'STOP_LOSS', x_time, max_hi_hours,
@@ -381,6 +338,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                         sell_strength = 0
                 elif (last_price - loss_price) / last_price > loss_percent:
                     loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
+
+            # если был SELL то target_percent отрицательный
             else:
                 target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
                 loss_percent = None
@@ -389,14 +348,14 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             target_price = make_multiple(start_price + last_price * target_percent, min_price_increment)
 
             # если цена поднялась выше порога
-            if last_price > target_price:
+            if last_price > target_price and start_direction == 'BUY':
                 sell_case = sell_case + ' target<'
                 sell_strength += 1
                 if sell_strength >= 2:
                     sold = check_and_trade(figi, 'SELL', last_price, sell_case, x_time, max_hi_hours,
                                            min_lo_hours, table_name)
             # если цена опустилась ниже порога
-            if last_price < target_price:
+            if last_price < target_price and start_direction == 'SELL':
                 buy_case = buy_case + ' target>'
                 buy_strength += 1
                 if buy_strength >= 2:
