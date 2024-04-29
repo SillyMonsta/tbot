@@ -304,7 +304,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             position_days = get_price_position(figi, table_name)
 
             # dif_roc выше 1 или ниже -1 записываем в лог, надо посмотреть каких значений он может достигать
-            if dif_roc > 1 or dif_roc < -1:
+            if last_roc > 1 or last_roc < -1:
                 write2file.write(str(datetime.datetime.now())[:19] +
                                  '  ' + ticker +
                                  '  dif_roc ' + str(dif_roc) +
