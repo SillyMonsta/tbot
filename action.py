@@ -176,7 +176,7 @@ def check_and_trade(figi, direction, last_price, case, x_time, max_hi_hours, min
 def analyse_ohlcv(ohlcv):
     rsi = TA.RSI(ohlcv)
     ef = TA.EFI(ohlcv)
-    roc = TA.ROC(ohlcv, 2)
+    roc = TA.ROC(ohlcv, 4)
     pb = TA.PERCENT_B(ohlcv)
     max_ef = numpy.nanmax(ef)
     min_ef = numpy.nanmin(ef)
