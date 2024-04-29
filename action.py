@@ -176,7 +176,7 @@ def check_and_trade(figi, direction, last_price, case, x_time, max_hi_hours, min
 def analyse_ohlcv(ohlcv):
     rsi = TA.RSI(ohlcv)
     ef = TA.EFI(ohlcv)
-    roc = TA.ROC(ohlcv, 14)
+    roc = TA.ROC(ohlcv, 7)
     pb = TA.PERCENT_B(ohlcv)
     max_ef = numpy.nanmax(ef)
     min_ef = numpy.nanmin(ef)
@@ -304,12 +304,12 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             position_days = get_price_position(figi, table_name)
 
             # dif_roc выше 1 или ниже -1 записываем в лог, надо посмотреть каких значений он может достигать
-            if last_roc > 1 or last_roc < -1:
-                write2file.write(str(datetime.datetime.now())[:19] +
-                                 '  ' + ticker +
-                                 '  dif_roc ' + str(dif_roc) +
-                                 '  last_roc ' + str(last_roc) +
-                                 '  prev_roc ' + str(prev_roc), 'log.txt')
+            #if last_roc > 1 or last_roc < -1:
+                #write2file.write(str(datetime.datetime.now())[:19] +
+                                 #'  ' + ticker +
+                                 #'  dif_roc ' + str(dif_roc) +
+                                 #'  last_roc ' + str(last_roc) +
+                                 #'  prev_roc ' + str(prev_roc), 'log.txt')
 
             # когда рост на масштабе дней развернулся
             if prev_position_days == 1:
