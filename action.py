@@ -305,8 +305,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             position_days = get_price_position(figi, table_name)
 
             if ticker == 'SBER':
-                my_list_without_nan =
-
                 max_rocs = sorted([x for x in roc.tolist() if not numpy.isnan(x)], reverse=True)[:7]
                 #min_from_max_roc = min(max_rocs)
                 write2file.write(str(datetime.datetime.now())[:19] +
