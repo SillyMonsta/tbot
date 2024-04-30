@@ -306,10 +306,10 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
             if ticker == 'SBER':
                 max_rocs = sorted(roc, reverse=True)[:7]
-                min_from_max_roc = min(max_rocs)
+                #min_from_max_roc = min(max_rocs)
                 write2file.write(str(datetime.datetime.now())[:19] +
                                  '  ' + ticker +
-                                 '  roc_level ' + str(min_from_max_roc), 'log.txt')
+                                 '  max_rocs ' + str(max_rocs), 'log.txt')
 
 
             # dif_roc выше 1 или ниже -1 записываем в лог, надо посмотреть каких значений он может достигать
