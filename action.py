@@ -304,12 +304,12 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
 
-            if ticker == 'SBER':
-                max_rocs = sorted([x for x in roc.tolist() if not numpy.isnan(x)], reverse=True)[:7]
-                #min_from_max_roc = min(max_rocs)
+            if ticker == 'YNDX':
+                max_rocs = sorted([x for x in roc.tolist() if not numpy.isnan(x)], reverse=True)[:2]
+                roc_level = min(max_rocs)
                 write2file.write(str(datetime.datetime.now())[:19] +
                                  '  ' + ticker +
-                                 '  max_rocs ' + str(max_rocs), 'log.txt')
+                                 '  roc_level ' + str(roc_level), 'log.txt')
 
 
             # dif_roc выше 1 или ниже -1 записываем в лог, надо посмотреть каких значений он может достигать
