@@ -123,7 +123,7 @@ def get_all_by_figi_interval(table_name, figi, interval, time_from):
             AND interval = %s
             AND candle_time > %s
             AND EXTRACT(DOW FROM candle_time) NOT IN (0, 6)
-            AND EXTRACT(HOUR FROM candle_time) IN (7, 8, 9, 10, 11, 12, 13, 14, 15)
+            AND EXTRACT(HOUR FROM candle_time) IN (7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
             ORDER BY candle_time DESC
             '''
     cursor.execute(query, (figi, interval, time_from))
@@ -287,7 +287,7 @@ def candles_to_finta(figi, x_time, table_name):
                 WHERE figi = %s 
                 AND interval = 4 
                 AND EXTRACT(DOW FROM candle_time) NOT IN (0, 6)
-                AND EXTRACT(HOUR FROM candle_time) IN (7, 8, 9, 10, 11, 12, 13, 14, 15)
+                AND EXTRACT(HOUR FROM candle_time) IN (7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
                 AND candle_time <= %s
                 ORDER BY candle_time DESC LIMIT 60
             ) subquery
