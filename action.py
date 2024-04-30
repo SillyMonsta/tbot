@@ -174,6 +174,11 @@ def check_and_trade(figi, direction, last_price, case, x_time, max_hi_hours, min
 
 
 def analyse_ohlcv(ohlcv):
+    sell_strength = 0
+    buy_strength = 0
+    sell_case = ''
+    buy_case = ''
+
     rsi = TA.RSI(ohlcv)
     ef = TA.EFI(ohlcv)
     roc = TA.ROC(ohlcv, 7)
@@ -194,11 +199,6 @@ def analyse_ohlcv(ohlcv):
     except TypeError:
         dif_roc = 0
 
-    sell_strength = 0
-    buy_strength = 0
-    sell_case = ''
-    buy_case = ''
-
     if last_pb > 1:
         sell_strength += 1
         sell_case = sell_case + ' PB>1'
@@ -211,6 +211,10 @@ def analyse_ohlcv(ohlcv):
         sell_strength += 1
         sell_case = sell_case + ' difROC>1'
 
+    if dif_roc < -1:
+        buy_strength += 1
+        buy_case = buy_case + ' difROC<-1'
+
     if last_pb < 0:
         buy_strength += 1
         buy_case = buy_case + ' PB<0'
@@ -219,11 +223,9 @@ def analyse_ohlcv(ohlcv):
         buy_strength += 1
         buy_case = buy_case + ' minEF&RSI'
 
-    if dif_roc < -1:
-        buy_strength += 1
-        buy_case = buy_case + ' difROC<-1'
 
-    return sell_strength, buy_strength, sell_case, buy_case, dif_roc, last_roc, prev_roc
+
+    return sell_strength, buy_strength, sell_case, buy_case, roc
 
 
 def analyze_candles(figi, events_extraction_case, x_time, table_name):
@@ -276,9 +278,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
         buy_strength = strength_case[1]
         sell_case = strength_case[2]
         buy_case = strength_case[3]
-        dif_roc = strength_case[4]
-        last_roc = strength_case[5]
-        prev_roc = strength_case[6]
+        roc = strength_case[4]
+
 
         max_hi_hours = Decimal(max(hi))
         min_lo_hours = Decimal(min(lo))
@@ -302,6 +303,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
+
+            if ticker == 'SBER':
+                print(roc)
 
             # dif_roc выше 1 или ниже -1 записываем в лог, надо посмотреть каких значений он может достигать
             #if last_roc > 1 or last_roc < -1:
