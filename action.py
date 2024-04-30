@@ -181,7 +181,7 @@ def analyse_ohlcv(ohlcv):
 
     rsi = TA.RSI(ohlcv)
     ef = TA.EFI(ohlcv)
-    roc = TA.ROC(ohlcv, 4)
+    roc = TA.ROC(ohlcv, 5)
     pb = TA.PERCENT_B(ohlcv)
     max_ef = numpy.nanmax(ef)
     min_ef = numpy.nanmin(ef)
@@ -303,27 +303,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
-
-            if ticker == 'YNDX':
-                max_rocs = sorted([x for x in roc.tolist() if not numpy.isnan(x)], reverse=True)[:3]
-                roc_level_u = min(max_rocs)
-                min_rocs = sorted([x for x in roc.tolist() if not numpy.isnan(x)], reverse=False)[:3]
-                roc_level_l = max(min_rocs)
-                write2file.write(str(datetime.datetime.now())[:19] +
-                                 '  ' + ticker +
-                                 '  roc ' + str(roc), 'log.txt')
-                write2file.write(str(datetime.datetime.now())[:19] +
-                                 '  ' + ticker +
-                                 '  max_rocs ' + str(max_rocs), 'log.txt')
-                write2file.write(str(datetime.datetime.now())[:19] +
-                                 '  ' + ticker +
-                                 '  roc_level_u ' + str(roc_level_u), 'log.txt')
-                write2file.write(str(datetime.datetime.now())[:19] +
-                                 '  ' + ticker +
-                                 '  min_rocs ' + str(min_rocs), 'log.txt')
-                write2file.write(str(datetime.datetime.now())[:19] +
-                                 '  ' + ticker +
-                                 '  roc_level_l ' + str(roc_level_l), 'log.txt')
 
 
             # dif_roc выше 1 или ниже -1 записываем в лог, надо посмотреть каких значений он может достигать
