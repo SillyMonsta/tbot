@@ -183,6 +183,7 @@ def analyse_ohlcv(ohlcv):
     ef = TA.EFI(ohlcv)
     roc = TA.ROC(ohlcv, 5)
     pb = TA.PERCENT_B(ohlcv)
+
     max_ef = numpy.nanmax(ef)
     min_ef = numpy.nanmin(ef)
     prev_ef = ef[len(ef) - 2]
@@ -191,13 +192,9 @@ def analyse_ohlcv(ohlcv):
     last_pb = pb[len(pb) - 1]
     prev_roc = roc[len(roc) - 2]
     last_roc = roc[len(roc) - 1]
-    try:
-        if last_roc != 0 and prev_roc != 0:
-            dif_roc = (last_roc - prev_roc) / last_roc
-        else:
-            dif_roc = 0
-    except TypeError:
-        dif_roc = 0
+
+    roc_level_u = min(sorted([x for x in roc.tolist()[:-1] if not numpy.isnan(x)], reverse=True)[:3])
+    roc_level_l = max(sorted([x for x in roc.tolist()[:-1] if not numpy.isnan(x)], reverse=False)[:3])
 
     if last_pb > 1:
         sell_strength += 1
@@ -207,13 +204,15 @@ def analyse_ohlcv(ohlcv):
         sell_strength += 1
         sell_case = sell_case + ' maxEF&RSI'
 
-    if dif_roc > 1:
+    if (last_roc < roc_level_u and (prev_roc > roc_level_u or prev_roc == roc_level_u)) \
+            or (last_roc < 0 and (prev_roc > 0 or prev_roc == 0)):
         sell_strength += 1
-        sell_case = sell_case + ' difROC>1'
+        sell_case = sell_case + ' ROC-s'
 
-    if dif_roc < -1:
+    if (last_roc > roc_level_l and (prev_roc < roc_level_l or prev_roc == roc_level_l))\
+            or (last_roc > 0 and (prev_roc < 0 or prev_roc == 0)):
         buy_strength += 1
-        buy_case = buy_case + ' difROC<-1'
+        buy_case = buy_case + ' ROC-b'
 
     if last_pb < 0:
         buy_strength += 1
@@ -223,9 +222,7 @@ def analyse_ohlcv(ohlcv):
         buy_strength += 1
         buy_case = buy_case + ' minEF&RSI'
 
-
-
-    return sell_strength, buy_strength, sell_case, buy_case, roc
+    return sell_strength, buy_strength, sell_case, buy_case
 
 
 def analyze_candles(figi, events_extraction_case, x_time, table_name):
@@ -278,8 +275,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
         buy_strength = strength_case[1]
         sell_case = strength_case[2]
         buy_case = strength_case[3]
-        roc = strength_case[4]
-
 
         max_hi_hours = Decimal(max(hi))
         min_lo_hours = Decimal(min(lo))
@@ -304,33 +299,21 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
 
-
-            # dif_roc выше 1 или ниже -1 записываем в лог, надо посмотреть каких значений он может достигать
-            #if last_roc > 1 or last_roc < -1:
-                #write2file.write(str(datetime.datetime.now())[:19] +
-                                 #'  ' + ticker +
-                                 #'  dif_roc ' + str(dif_roc) +
-                                 #'  last_roc ' + str(last_roc) +
-                                 #'  prev_roc ' + str(prev_roc), 'log.txt')
-
-            # когда рост на масштабе дней развернулся
+            # если рост на масштабе дней развернулся
             if prev_position_days == 1:
                 if position_days < Decimal(0.98):
                     sell_strength += 1
                     sell_case = sell_case + ' days_rvrs'
-                    #write2file.write(str(datetime.datetime.now())[:19] + ' SELL ' + ticker + ' ' + str(last_price) +
-                                     #' position_days: ' + str(round(position_days, 3)) +
-                                     #' prev_position_days: ' + str(round(prev_position_days, 3)), 'log.txt')
                 else:
                     position_days = Decimal(1)
-            # когда падение на масштабе дней развернулось
+            # если падение на масштабе дней развернулось
             if prev_position_days == 0:
                 if position_days > Decimal(0.02):
                     buy_strength += 1
                     buy_case = buy_case + ' days_rvrs'
-                    #write2file.write(str(datetime.datetime.now())[:19] + ' BUY ' + ticker + ' ' + str(last_price) +
-                                     #' position_days: ' + str(round(position_days, 3)) +
-                                     #' prev_position_days: ' + str(round(prev_position_days, 3)), 'log.txt')
+                    # write2file.write(str(datetime.datetime.now())[:19] + ' BUY ' + ticker + ' ' + str(last_price) +
+                    # ' position_days: ' + str(round(position_days, 3)) +
+                    # ' prev_position_days: ' + str(round(prev_position_days, 3)), 'log.txt')
                 else:
                     position_days = 0
 
