@@ -353,6 +353,10 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 if buy_strength >= 2:
                     sold = check_and_trade(figi, 'BUY', last_price, buy_case, x_time, max_hi_hours,
                                            min_lo_hours, table_name)
+
+            if ticker == 'YNDX':
+                write2file.write(str(datetime.datetime.now())[:19] + ' ' + ticker + str(last_price) + '  ' + str(sold), 'log.txt')
+
             if sold is False:
                 data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, start_direction, start_case,
                                                start_price, last_price, target_price, loss_price, loss_percent,
