@@ -311,7 +311,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 roc_level_l = max(min_rocs)
                 write2file.write(str(datetime.datetime.now())[:19] +
                                  '  ' + ticker +
-                                 '  roc ' + str([x for x in roc.tolist() if not numpy.isnan(x)]), 'log.txt')
+                                 '  roc ' + str(roc.tolist()), 'log.txt')
                 write2file.write(str(datetime.datetime.now())[:19] +
                                  '  ' + ticker +
                                  '  max_rocs ' + str(max_rocs), 'log.txt')
