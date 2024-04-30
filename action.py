@@ -299,6 +299,10 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
 
+            if sell_case != '' or buy_case != '':
+                write2file.write(str(datetime.datetime.now())[:19] + ' ' + ticker + ' '
+                                 + sell_case + buy_case + ' ' + str(last_price), 'log.txt')
+
             # если рост на масштабе дней развернулся
             if prev_position_days == 1:
                 if position_days < Decimal(0.98):
@@ -311,9 +315,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 if position_days > Decimal(0.02):
                     buy_strength += 1
                     buy_case = buy_case + ' days_rvrs'
-                    # write2file.write(str(datetime.datetime.now())[:19] + ' BUY ' + ticker + ' ' + str(last_price) +
-                    # ' position_days: ' + str(round(position_days, 3)) +
-                    # ' prev_position_days: ' + str(round(prev_position_days, 3)), 'log.txt')
                 else:
                     position_days = 0
 
