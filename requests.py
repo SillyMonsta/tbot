@@ -85,6 +85,17 @@ def request_shares():
     return
 
 
+def request_trading_status(figi):
+    with Client(TOKEN) as client:
+        try:
+            trading_status = client.instruments.share_by(id_type=1, id=figi).instrument.trading_status.value
+        except InvestError as error:
+            trading_status = 0
+            write2file.write(str(datetime.datetime.now())[:19] + ' requests.py --> request_trading_status '
+                             + str(error), 'log.txt')
+    return trading_status
+
+
 def request_history_candles(figi_list, history_candle_days, start_range, table_name):
     write2file.write(str(datetime.datetime.now())[:19] + ' request history_candles for ' + table_name, 'log.txt')
     interval_list = [1, 4, 5]

@@ -304,8 +304,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
 
-            if ticker == 'SBER':
-                print(roc)
+            #if ticker == 'SBER':
+                #print(roc)
 
             # dif_roc выше 1 или ниже -1 записываем в лог, надо посмотреть каких значений он может достигать
             #if last_roc > 1 or last_roc < -1:
