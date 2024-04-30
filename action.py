@@ -305,7 +305,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             position_days = get_price_position(figi, table_name)
 
             if ticker == 'SBER':
-                max_rocs = sorted(roc.tolist(), reverse=True)[:7]
+                max_rocs = sorted(roc.tolist(), reverse=True)
                 #min_from_max_roc = min(max_rocs)
                 write2file.write(str(datetime.datetime.now())[:19] +
                                  '  ' + ticker +
