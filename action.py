@@ -209,7 +209,7 @@ def analyse_ohlcv(ohlcv):
         sell_strength += 1
         sell_case = sell_case + ' ROC-s'
 
-    if (last_roc > roc_level_l and (prev_roc < roc_level_l or prev_roc == roc_level_l))\
+    if (last_roc > roc_level_l and (prev_roc < roc_level_l or prev_roc == roc_level_l)) \
             or (last_roc > 0 and (prev_roc < 0 or prev_roc == 0)):
         buy_strength += 1
         buy_case = buy_case + ' ROC-b'
@@ -299,9 +299,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
 
-            #if sell_case != '' or buy_case != '':
-                #write2file.write(str(datetime.datetime.now())[:19] + ' ' + ticker + ' '
-                                 #+ sell_case + buy_case + ' ' + str(last_price), 'log.txt')
+            # if sell_case != '' or buy_case != '':
+            # write2file.write(str(datetime.datetime.now())[:19] + ' ' + ticker + ' '
+            # + sell_case + buy_case + ' ' + str(last_price), 'log.txt')
 
             # если рост на масштабе дней развернулся
             if prev_position_days == 1:
@@ -318,20 +318,23 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 else:
                     position_days = 0
 
-            # если был BUY то определяем loss_price и loss_percent
+            # если start_direction BUY то определяем target_percent, loss_percent и loss_price
             if start_direction == 'BUY':
                 if loss_percent is None:
                     loss_percent = Decimal(0.08)
+
                 target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
+                # если last_price опустилась ниже loss_price то STOP_LOSS
                 if last_price <= loss_price:
                     sold = check_and_trade(figi, 'SELL', last_price, 'STOP_LOSS', x_time, max_hi_hours,
                                            min_lo_hours, table_name)
+                    # если продажа STOP_LOSS состоялась обнуляем sell_strength
                     if sold and sell_strength >= 2:
                         sell_strength = 0
+                # если цена поднялась и расстояние между loss_price и ценой стало больше, пересчитываем loss_price
                 elif (last_price - loss_price) / last_price > loss_percent:
                     loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
-
-            # если был SELL то target_percent отрицательный
+            # если SELL то определяем target_percent (отрицательный), loss_percent и loss_price при покупке не нужны
             else:
                 target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
                 loss_percent = None
@@ -343,20 +346,19 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             if last_price > target_price and start_direction == 'BUY':
                 sell_case = sell_case + ' target<'
                 sell_strength += 1
-                if sell_strength >= 2:
-                    sold = check_and_trade(figi, 'SELL', last_price, sell_case, x_time, max_hi_hours,
-                                           min_lo_hours, table_name)
+
             # если цена опустилась ниже порога
             if last_price < target_price and start_direction == 'SELL':
                 buy_case = buy_case + ' target>'
                 buy_strength += 1
-                if buy_strength >= 2:
-                    sold = check_and_trade(figi, 'BUY', last_price, buy_case, x_time, max_hi_hours,
-                                           min_lo_hours, table_name)
 
-            if ticker == 'YNDX':
-                write2file.write(str(datetime.datetime.now())[:19] + ' ' + ticker + str(last_price) + '  ' + str(sold), 'log.txt')
+            # если два или больше индикаторов сработало, то торгуем
+            if sell_strength >= 2:
+                sold = check_and_trade(figi, 'SELL', last_price, sell_case, x_time, max_hi_hours, min_lo_hours, table_name)
+            if buy_strength >= 2:
+                sold = check_and_trade(figi, 'BUY', last_price, buy_case, x_time, max_hi_hours, min_lo_hours, table_name)
 
+            # если условий для торговли не было, то просто обновляем данные в таблице analyzed_shares
             if sold is False:
                 data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, start_direction, start_case,
                                                start_price, last_price, target_price, loss_price, loss_percent,
