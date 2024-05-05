@@ -126,7 +126,8 @@ def prepare_stream_connection():
 
 
 def check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
-                    direction, last_price, case, x_time, max_hi_hours, min_lo_hours, table_name):
+                    direction, last_price, case, x_time, max_hi_hours, min_lo_hours, table_name,
+                    buy, fast_buy, fast_sell):
     if check_last_event(figi, direction, case, last_price, x_time):
         min_price_increment = sql2data.get_info_by_figi('shares', 'min_price_increment', figi)[0][0]
 
@@ -165,11 +166,12 @@ def check_and_trade(figi, ticker, start_time, start_case, start_price, start_dir
         if direction != start_direction:
             data2sql.analyzed_shares2sql([(figi, ticker, current_profit, x_time, direction, case, last_price,
                                            last_price, target_price, loss_price, loss_percent, target_percent,
-                                           position_hours, position_days)])
+                                           position_hours, position_days, buy, fast_buy, fast_sell)])
         if direction == start_direction:
-            data2sql.analyzed_shares2sql([(figi, ticker, current_profit, start_time, start_direction, start_case, start_price,
-                                           last_price, target_price, loss_price, loss_percent, target_percent,
-                                           position_hours, position_days)])
+            data2sql.analyzed_shares2sql(
+                [(figi, ticker, current_profit, start_time, start_direction, start_case, start_price,
+                  last_price, target_price, loss_price, loss_percent, target_percent,
+                  position_hours, position_days, buy, fast_buy, fast_sell)])
 
         trade = True
     else:
@@ -299,7 +301,11 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             start_price = analyzed_share[0][6]
             loss_price = analyzed_share[0][9]
             loss_percent = analyzed_share[0][10]
+            prev_position_hours = analyzed_share[0][12]
             prev_position_days = analyzed_share[0][13]
+            buy = analyzed_share[0][14]
+            fast_buy = analyzed_share[0][15]
+            fast_sell = analyzed_share[0][16]
 
             position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
@@ -316,8 +322,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                     loss_percent = target_percent * Decimal(1.4)
                 # если last_price опустилась ниже loss_price то STOP_LOSS
                 if last_price <= loss_price:
-                    sold = check_and_trade(figi, ticker,  start_time, start_case, start_price, start_direction,
-                                           'SELL', last_price, 'STOP_LOSS', x_time, max_hi_hours, min_lo_hours, table_name)
+                    sold = check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
+                                           'SELL', last_price, 'STOP_LOSS', x_time, max_hi_hours, min_lo_hours,
+                                           table_name, buy, fast_buy, fast_sell)
                     # если продажа STOP_LOSS состоялась обнуляем sell_strength
                     if sold and sell_strength >= 2:
                         sell_strength = 0
@@ -336,7 +343,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             if last_price > target_price and start_direction == 'BUY':
                 sell_case = sell_case + ' target<'
                 sell_strength += 1
-
             # если цена опустилась ниже порога target>
             if last_price < target_price and start_direction == 'SELL':
                 buy_case = buy_case + ' target>'
@@ -357,38 +363,62 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 else:
                     position_days = 0
 
+            # если рост на масштабе часов развернулся и цена превысила target
+            if prev_position_hours == 1 and sell_case.split(' ')[-1] == 'target<':
+                if position_hours < Decimal(0.98):
+                    sell_strength += 1
+                    sell_case = sell_case + ' hours_rvrs'
+                else:
+                    position_hours = Decimal(1)
+            # если падение на масштабе дней развернулось и цена опустилась ниже target
+            if prev_position_hours == 0 and buy_case.split(' ')[-1] == 'target>':
+                if position_hours > Decimal(0.02):
+                    buy_strength += 1
+                    buy_case = buy_case + ' hours_rvrs'
+                else:
+                    position_hours = 0
+
             # если два или больше индикаторов сработало, то торгуем
             if sell_strength >= 2 \
                     and position_days != 1 and position_days != 0 \
                     and position_hours != 1 and position_hours != 0:
-                sold = check_and_trade(figi, ticker,  start_time, start_case, start_price, start_direction,
-                                       'SELL', last_price, sell_case, x_time, max_hi_hours, min_lo_hours, table_name)
+                sold = check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
+                                       'SELL', last_price, sell_case, x_time, max_hi_hours, min_lo_hours, table_name,
+                                       buy, fast_buy, fast_sell)
 
             if buy_strength >= 2 \
                     and position_days != 1 and position_days != 0 \
                     and position_hours != 1 and position_hours != 0:
                 sold = check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
-                                       'BUY', last_price, buy_case, x_time, max_hi_hours, min_lo_hours, table_name)
+                                       'BUY', last_price, buy_case, x_time, max_hi_hours, min_lo_hours, table_name,
+                                       buy, fast_buy, fast_sell)
 
             # если условий для торговли не было, то просто обновляем данные в таблице analyzed_shares
             if sold is False:
                 data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, start_direction, start_case,
                                                start_price, last_price, target_price, loss_price, loss_percent,
-                                               target_percent, position_hours, position_days)])
+                                               target_percent, position_hours, position_days, buy, fast_buy,
+                                               fast_sell)])
+        # если акции нет в таблице analyzed_shares
         else:
             ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
             start_time = x_time.replace(microsecond=0)
             start_price = last_price
+            buy = None
+            fast_buy = None
+            fast_sell = None
             if sell_strength >= 2:
                 start_direction = 'SELL'
                 start_case = sell_case
                 check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
-                                'SELL', last_price, sell_case, x_time, max_hi_hours, min_lo_hours, table_name)
+                                'SELL', last_price, sell_case, x_time, max_hi_hours, min_lo_hours, table_name,
+                                buy, fast_buy, fast_sell)
             if buy_strength >= 2:
                 start_direction = 'BUY'
                 start_case = buy_case
                 check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
-                                'BUY', last_price, buy_case, x_time, max_hi_hours, min_lo_hours, table_name)
+                                'BUY', last_price, buy_case, x_time, max_hi_hours, min_lo_hours, table_name,
+                                buy, fast_buy, fast_sell)
     return
 
 

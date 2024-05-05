@@ -56,20 +56,12 @@ def create_candles(table_name):
     return
 
 
-def create_control_list():
-    cursor.execute("CREATE TABLE control_list (ticker VARCHAR(50),"
-                   "start_direction VARCHAR(50), start_price NUMERIC, target_price NUMERIC,"
-                   "loss_percent NUMERIC, price_change_percent NUMERIC, stop_loss NUMERIC,"
-                   "price_start_position_hours NUMERIC, price_position_days NUMERIC, lots_qnt NUMERIC)")
-
-    return
-
-
 def create_analyzed_shares():
     cursor.execute("CREATE TABLE analyzed_shares (figi VARCHAR(50), ticker VARCHAR(50), profit NUMERIC,"
                    "start_time TIMESTAMPTZ, start_direction VARCHAR(50), start_case TEXT, start_price NUMERIC,"
                    "price NUMERIC, target_price NUMERIC, loss_price NUMERIC, loss_percent NUMERIC,"
-                   "target_percent NUMERIC, position_hours NUMERIC, position_days NUMERIC)")
+                   "target_percent NUMERIC, position_hours NUMERIC, position_days NUMERIC,"
+                   "buy INT, fast_buy INT, fast_sell INT)")
     cursor.execute("""CREATE UNIQUE INDEX analyzed_shares_figi_idx ON public.analyzed_shares USING btree (figi)""")
 
     return
@@ -232,23 +224,9 @@ def get_info_by_ticker(table_name, column_name, ticker):
     return results
 
 
-def share_from_control_list_by_ticker(ticker):
-    query = f'''SELECT * FROM control_list WHERE ticker = %s'''
-    cursor.execute(query, (ticker,))
-    results = cursor.fetchall()
-    return results
-
-
 def analyzed_share_by_figi(figi):
     query = '''SELECT * FROM analyzed_shares WHERE figi = %s'''
     cursor.execute(query, (figi,))
-    results = cursor.fetchall()
-    return results
-
-
-def tickers_from_control_list():
-    query = f'''SELECT ticker FROM control_list'''
-    cursor.execute(query, )
     results = cursor.fetchall()
     return results
 
@@ -301,12 +279,5 @@ def candles_to_finta(figi, x_time, table_name):
 def distinct_figi_events():
     query = '''SELECT DISTINCT figi FROM events_list'''
     cursor.execute(query)
-    results = cursor.fetchall()
-    return results
-
-
-def all_from_events():
-    query = '''SELECT * FROM events_list ORDER BY event_time'''
-    cursor.execute(query, )
     results = cursor.fetchall()
     return results

@@ -41,8 +41,8 @@ def update_pid(scrypt_name, connection_pid):
     return
 
 
-def update_control_list(ticker, column_name, value):
-    query = f"UPDATE control_list SET {column_name} = %s WHERE ticker = %s"
+def update_analyzed_shares_column(ticker, column_name, value):
+    query = f"UPDATE analyzed_shares SET {column_name} = %s WHERE ticker = %s"
     cursor.execute(query, (value, ticker))
     connection.commit()
 
@@ -50,8 +50,9 @@ def update_control_list(ticker, column_name, value):
 def analyzed_shares2sql(analyzed_shares_list):
     query = f"""
         INSERT INTO analyzed_shares (figi, ticker, profit, start_time, start_direction, start_case, start_price, 
-        price, target_price, loss_price, loss_percent, target_percent, position_hours, position_days)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        price, target_price, loss_price, loss_percent, target_percent, position_hours, position_days,
+        buy, fast_buy, fast_sell)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT(figi) DO UPDATE SET
                 profit = EXCLUDED.profit,
                 start_time = EXCLUDED.start_time,
