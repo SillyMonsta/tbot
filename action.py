@@ -1,4 +1,4 @@
-import requests
+import tinkoff_requests
 import data2sql
 import sql2data
 from decimal import Decimal
@@ -90,7 +90,7 @@ def prepare_stream_connection():
     # проверяем есть ли в базе данных таблица acc_id если нет, то создаем, запрашиваем и заполняем
     if sql2data.is_table_exist('acc_id') is False:
         sql2data.create__acc_id()
-        requests.request_account_id()
+        tinkoff_requests.request_account_id()
     # проверяем есть ли в базе данных таблица shares если нет, то создаем, запрашиваем и заполняем
     if sql2data.is_table_exist('shares') is False:
         sql2data.create_shares()
@@ -163,16 +163,20 @@ def check_and_trade(figi, ticker, start_time, start_case, start_price, start_dir
         data2sql.events_list2sql([(ticker, case, figi, direction, last_price, round(price_position_days, 3),
                                    round(profit, 3), deal_qnt, round(trend_near, 3), round(trend_far, 3),
                                    start_time)])
-        if direction != start_direction:
-            data2sql.analyzed_shares2sql([(figi, ticker, current_profit, x_time, direction, case, last_price,
-                                           last_price, target_price, loss_price, loss_percent, target_percent,
-                                           position_hours, position_days, buy, fast_buy, fast_sell)])
+
         if direction == start_direction:
             data2sql.analyzed_shares2sql(
                 [(figi, ticker, current_profit, start_time, start_direction, start_case, start_price,
                   last_price, target_price, loss_price, loss_percent, target_percent,
                   position_hours, position_days, buy, fast_buy, fast_sell)])
 
+        #trading_status = requests.request_trading_status(figi)
+        #if trading_status == 5:
+
+        if direction != start_direction:
+            data2sql.analyzed_shares2sql([(figi, ticker, current_profit, x_time, direction, case, last_price,
+                                           last_price, target_price, loss_price, loss_percent, target_percent,
+                                           position_hours, position_days, buy, fast_buy, fast_sell)])
         trade = True
     else:
         trade = False
@@ -530,7 +534,7 @@ def events_extraction(history_candle_days, time_from):
         figi = figi_row[0]
         ticker = figi_row[1]
         try:
-            requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
+            tinkoff_requests.request_history_candles([figi], history_candle_days, 0, 'candles_extraction')
             # запрашиваем количество минутных свечей и отнимаем у них 60, точка старта тестирования
             figi_1m_candles = sql2data.get_all_by_figi_interval('candles_extraction', figi, 1, time_from)
             days_from_last_event = ((now() - datetime.datetime.fromisoformat(
