@@ -132,18 +132,19 @@ def request_history_candles(figi_list, history_candle_days, start_range, table_n
 
 
 def request_balance():
-    money_list = []
-    securities_list = []
     with Client(TOKEN) as client:
         try:
             positions = client.operations.get_positions(account_id=account_id)
+            money_list = []
             for m in positions.money:
                 one_row_m = (m.currency, units_nano_merge(m.units, m.nano))
                 money_list.append(one_row_m)
+            else:
+                data2sql.balance2sql('balance', money_list)
+
             for s in positions.securities:
-                one_row_s = (s.figi, s.balance)
-                securities_list.append(one_row_s)
-            data2sql.securities2sql('balances', money_list + securities_list)
+                data2sql.update_analyzed_shares_column_by_figi(s.figi, 'vol', s.balance)
+
         except InvestError as error:
             write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> request_balance --> InvestError: '
                              + str(error), 'log.txt')

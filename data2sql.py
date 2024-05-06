@@ -47,12 +47,18 @@ def update_analyzed_shares_column(ticker, column_name, value):
     connection.commit()
 
 
+def update_analyzed_shares_column_by_figi(figi, column_name, value):
+    query = f"UPDATE analyzed_shares SET {column_name} = %s WHERE figi = %s"
+    cursor.execute(query, (value, figi))
+    connection.commit()
+
+
 def analyzed_shares2sql(analyzed_shares_list):
     query = f"""
         INSERT INTO analyzed_shares (figi, ticker, profit, start_time, start_direction, start_case, start_price, 
         price, target_price, loss_price, loss_percent, target_percent, position_hours, position_days,
-        buy, fast_buy, fast_sell)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        buy, fast_buy, fast_sell, vol, req_vol)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT(figi) DO UPDATE SET
                 profit = EXCLUDED.profit,
                 start_time = EXCLUDED.start_time,
@@ -65,7 +71,12 @@ def analyzed_shares2sql(analyzed_shares_list):
                 loss_percent = EXCLUDED.loss_percent,
                 target_percent = EXCLUDED.target_percent,
                 position_hours = EXCLUDED.position_hours,
-                position_days = EXCLUDED.position_days
+                position_days = EXCLUDED.position_days,
+                buy = EXCLUDED.buy,
+                fast_buy = EXCLUDED.fast_buy,
+                fast_sell = EXCLUDED.fast_sell,
+                vol = EXCLUDED.vol,
+                req_vol = EXCLUDED.req_vol
         """
     cursor.executemany(query, analyzed_shares_list)
     connection.commit()
@@ -130,7 +141,7 @@ def candles2sql(trades2candles_list):
     return
 
 
-def securities2sql(table_name, securities_list):
+def balance2sql(table_name, securities_list):
     query = f"""
         INSERT INTO {table_name} (figi, quantity)
             VALUES(%s, %s)

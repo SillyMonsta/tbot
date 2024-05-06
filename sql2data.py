@@ -32,9 +32,8 @@ def create__acc_id():
     return
 
 
-def create_balances():
-    cursor.execute("CREATE TABLE balances (figi VARCHAR(255), quantity INT)")
-    cursor.execute("""CREATE UNIQUE INDEX balances_pkey ON public.balances USING btree (figi)""")
+def create_balance():
+    cursor.execute("CREATE TABLE balance (figi VARCHAR(255), quantity INT)")
     return
 
 
@@ -61,7 +60,7 @@ def create_analyzed_shares():
                    "start_time TIMESTAMPTZ, start_direction VARCHAR(50), start_case TEXT, start_price NUMERIC,"
                    "price NUMERIC, target_price NUMERIC, loss_price NUMERIC, loss_percent NUMERIC,"
                    "target_percent NUMERIC, position_hours NUMERIC, position_days NUMERIC,"
-                   "buy INT, fast_buy INT, fast_sell INT)")
+                   "buy INT, fast_buy INT, fast_sell INT, vol INT, req_vol INT)")
     cursor.execute("""CREATE UNIQUE INDEX analyzed_shares_figi_idx ON public.analyzed_shares USING btree (figi)""")
 
     return

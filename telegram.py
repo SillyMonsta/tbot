@@ -4,6 +4,7 @@ import os
 import data2sql
 import write2file
 import datetime
+import sql2data
 
 bot_token = get_token_file.get_token('telegram_bot_token.txt').split()[0]
 
@@ -23,8 +24,17 @@ def handle_message(message):
     user_id = message.from_user.id
     # если сообщения от нужного пользователя
     if user_id == 1138331624:
-        # Отправляем ответное сообщение пользователю
-        bot.send_message(message.chat.id, f"Вы написали: {user_message}")
+        feedback = 'неизвестная команда'
+        if user_message.split(' ')[0] == 'share':
+            ticker = user_message.split(' ')[1]
+            column_name = user_message.split(' ')[2]
+            value = int(user_message.split(' ')[3])
+            data2sql.update_analyzed_shares_column(ticker, column_name, value)
+
+            # фитбэк
+            feedback = str(sql2data.get_info_by_ticker('analyzed_shares', column_name, ticker))
+
+        bot.send_message(message.chat.id, feedback)
 
 
 # Запуск бота
