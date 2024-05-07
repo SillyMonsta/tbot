@@ -40,7 +40,7 @@ def create_balance():
 def create_shares():
     cursor.execute("CREATE TABLE shares (figi VARCHAR(50), ticker VARCHAR(50),"
                    "lot INT, currency VARCHAR(50), instrument_name VARCHAR(255),"
-                   "exchange VARCHAR(50), sector VARCHAR(255), trading_status INT, min_price_increment NUMERIC,"
+                   "exchange VARCHAR(50), sector VARCHAR(255), min_price_increment NUMERIC,"
                    "uid VARCHAR(255))")
     cursor.execute("""CREATE UNIQUE INDEX shares_figi_idx ON public.shares USING btree (figi)""")
     return
@@ -60,16 +60,15 @@ def create_analyzed_shares():
                    "start_time TIMESTAMPTZ, start_direction VARCHAR(50), start_case TEXT, start_price NUMERIC,"
                    "price NUMERIC, target_price NUMERIC, loss_price NUMERIC, loss_percent NUMERIC,"
                    "target_percent NUMERIC, position_hours NUMERIC, position_days NUMERIC,"
-                   "buy INT, fast_buy INT, fast_sell INT, vol INT, req_vol INT)")
+                   "buy INT, fast_buy INT, sell INT, vol INT, req_vol INT)")
     cursor.execute("""CREATE UNIQUE INDEX analyzed_shares_figi_idx ON public.analyzed_shares USING btree (figi)""")
 
     return
 
 
-def create_orders_history():
-    cursor.execute("CREATE TABLE orders_history (ticker VARCHAR(50), "
-                   "figi VARCHAR(50), direction VARCHAR(50), price NUMERIC,"
-                   "quantity NUMERIC, order_id VARCHAR(50), order_time TIMESTAMPTZ)")
+def create_orders():
+    cursor.execute("CREATE TABLE orders (order_id VARCHAR(50), status INT, ticker VARCHAR(50), "
+                   "direction VARCHAR(50), price NUMERIC, quantity NUMERIC, order_time TIMESTAMPTZ)")
     return
 
 
@@ -226,6 +225,20 @@ def get_info_by_ticker(table_name, column_name, ticker):
 def analyzed_share_by_figi(figi):
     query = '''SELECT * FROM analyzed_shares WHERE figi = %s'''
     cursor.execute(query, (figi,))
+    results = cursor.fetchall()
+    return results
+
+
+def analyzed_share_by_ticker(ticker):
+    query = '''SELECT * FROM analyzed_shares WHERE ticker = %s'''
+    cursor.execute(query, (ticker,))
+    results = cursor.fetchall()
+    return results
+
+
+def analyzed_share_tickers_list():
+    query = '''SELECT ticker FROM analyzed_shares'''
+    cursor.execute(query)
     results = cursor.fetchall()
     return results
 

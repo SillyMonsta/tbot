@@ -57,7 +57,7 @@ def analyzed_shares2sql(analyzed_shares_list):
     query = f"""
         INSERT INTO analyzed_shares (figi, ticker, profit, start_time, start_direction, start_case, start_price, 
         price, target_price, loss_price, loss_percent, target_percent, position_hours, position_days,
-        buy, fast_buy, fast_sell, vol, req_vol)
+        buy, fast_buy, sell, vol, req_vol)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT(figi) DO UPDATE SET
                 profit = EXCLUDED.profit,
@@ -74,7 +74,7 @@ def analyzed_shares2sql(analyzed_shares_list):
                 position_days = EXCLUDED.position_days,
                 buy = EXCLUDED.buy,
                 fast_buy = EXCLUDED.fast_buy,
-                fast_sell = EXCLUDED.fast_sell,
+                sell = EXCLUDED.sell,
                 vol = EXCLUDED.vol,
                 req_vol = EXCLUDED.req_vol
         """
@@ -85,9 +85,9 @@ def analyzed_shares2sql(analyzed_shares_list):
 
 def shares2sql(shares_list):
     query = f"""
-        INSERT INTO shares (figi, ticker, lot, currency, instrument_name, exchange, sector, trading_status, 
+        INSERT INTO shares (figi, ticker, lot, currency, instrument_name, exchange, sector, 
         min_price_increment, uid)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT(figi) DO UPDATE SET
                 ticker = EXCLUDED.ticker,
                 lot = EXCLUDED.lot,
@@ -95,7 +95,6 @@ def shares2sql(shares_list):
                 instrument_name = EXCLUDED.instrument_name,
                 exchange = EXCLUDED.exchange,
                 sector = EXCLUDED.sector,
-                trading_status = EXCLUDED.trading_status,
                 min_price_increment = EXCLUDED.min_price_increment,
                 uid = EXCLUDED.uid
         """

@@ -30,8 +30,9 @@ def request_account_id():
             acc_import_name = client.users.get_accounts().accounts[0].name
             data2sql.account_id2sql(acc_id, acc_import_name)
         except InvestError as error:
-            write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> request_account_id --> InvestError: '
-                             + str(error), 'log.txt')
+            write2file.write(
+                str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> request_account_id --> InvestError: '
+                + str(error), 'log.txt')
 
 
 # проверяем есть ли в базе данных таблица acc_id если нет, то создаем, запрашиваем и заполняем
@@ -73,15 +74,15 @@ def request_shares():
                         share.name,
                         share.exchange,
                         share.sector,
-                        share.trading_status,
                         units_nano_merge(share.min_price_increment.units, share.min_price_increment.nano),
                         share.uid,
                     )
                     shares_list.append(one_row)
             data2sql.shares2sql(shares_list)
         except InvestError as error:
-            write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> request_shares --> InvestError: '
-                             + str(error), 'log.txt')
+            write2file.write(
+                str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> request_shares --> InvestError: '
+                + str(error), 'log.txt')
     return
 
 
@@ -126,8 +127,9 @@ def request_history_candles(figi_list, history_candle_days, start_range, table_n
                         candles_list.append(one_row)
                 data2sql.history_candles2sql(table_name, candles_list)
         except InvestError as error:
-            write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> history_candles --> InvestError: '
-                             + str(error), 'log.txt')
+            write2file.write(
+                str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> history_candles --> InvestError: '
+                + str(error), 'log.txt')
     return
 
 
@@ -146,9 +148,49 @@ def request_balance():
                 data2sql.update_analyzed_shares_column_by_figi(s.figi, 'vol', s.balance)
 
         except InvestError as error:
-            write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> request_balance --> InvestError: '
-                             + str(error), 'log.txt')
+            write2file.write(
+                str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> request_balance --> InvestError: '
+                + str(error), 'log.txt')
     return
+
+
+def get_order_state(order_id):
+    with Client(TOKEN) as client:
+        try:
+            response = client.orders.get_order_state(
+                account_id=account_id,
+                order_id=order_id,
+                order_type=OrderType.ORDER_TYPE_MARKET
+            )
+            status = response.execution_report_status.value
+        except InvestError as error:
+            write2file.write(
+                str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> limit_order --> InvestError: '
+                + str(error), 'log.txt')
+    return order_id, status
+
+
+def market_order(figi, direction, quantity):
+    order_id = str(time.time())
+    with Client(TOKEN) as client:
+        try:
+            response = client.orders.post_order(
+                figi=figi,
+                quantity=quantity,
+                direction=direction,
+                account_id=account_id,
+                order_type=OrderType.ORDER_TYPE_MARKET,
+                order_id=order_id
+            )
+            status = response.execution_report_status.value
+            order_id = response.order_id
+            write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> market_order DONE: order_id='
+                             + str(response.order_id), 'log.txt')
+        except InvestError as error:
+            write2file.write(
+                str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> market_order --> InvestError: '
+                + str(error), 'log.txt')
+    return order_id, status
 
 
 def limit_order(figi, direction, quantity, order_price):
@@ -158,18 +200,21 @@ def limit_order(figi, direction, quantity, order_price):
             response = client.orders.post_order(
                 figi=figi,
                 quantity=quantity,
-                price=decimal_to_quotation(Decimal(order_price)),  # !!!цена за лот!!!
+                price=decimal_to_quotation(Decimal(order_price)),  # !!!цена за лот (order_price = last_price * lot)!!!
                 direction=direction,
                 account_id=account_id,
                 order_type=OrderType.ORDER_TYPE_LIMIT,
                 order_id=order_id
             )
+            status = response.execution_report_status.value
+            order_id = response.order_id
             write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> limit_order DONE: order_id='
                              + str(response.order_id), 'log.txt')
         except InvestError as error:
-            write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> limit_order --> InvestError: '
-                             + str(error), 'log.txt')
-    return order_id
+            write2file.write(
+                str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> limit_order --> InvestError: '
+                + str(error), 'log.txt')
+    return order_id, status
 
 
 def cancel(order_id):
@@ -216,8 +261,9 @@ def operation_executed():
                     operation_list.append(one_row)
             data2sql.operation_executed2sql(operation_list)
         except InvestError as error:
-            write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> operation_executed --> InvestError: '
-                             + str(error), 'log.txt')
+            write2file.write(
+                str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> operation_executed --> InvestError: '
+                + str(error), 'log.txt')
     return
 
 
@@ -246,16 +292,13 @@ def operation_in_progress():
     return
 
 
-def get_order_request():
-    money_list = []
-    securities_list = []
+def get_orders_request():
     with Client(TOKEN) as client:
         try:
             orders = client.orders.get_orders(account_id=account_id)
-
         except InvestError as error:
             write2file.write(str(datetime.datetime.now())[:19] +
-                             ' tinkoff_requests.py --> get_order_request --> InvestError: '
+                             ' tinkoff_requests.py --> get_orders_request --> InvestError: '
                              + str(error), 'log.txt')
     return orders.orders
 
