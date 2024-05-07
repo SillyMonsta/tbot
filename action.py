@@ -97,7 +97,7 @@ def prepare_stream_connection():
         tinkoff_requests.request_shares()
     # проверяем есть ли в базе данных таблица balances если нет, то создаем
     if sql2data.is_table_exist('balances') is False:
-        sql2data.create_balances()
+        sql2data.create_balance()
     if sql2data.is_table_exist('analyzed_shares') is False:
         sql2data.create_analyzed_shares()
     # проверяем есть ли в базе данных таблица candles если нет, то создаем
