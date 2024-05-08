@@ -140,14 +140,14 @@ def check_and_trade(figi, ticker, start_time, start_case, start_price, start_dir
         result_analyze_events = analyze_events(figi, now_case)
 
         if direction == 'SELL':
-            current_profit = (last_price - start_price) / last_price
+            current_profit = (start_price - last_price) / start_price
             profit = result_analyze_events[0]
             target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
             loss_percent = None
             loss_price = None
             # if sell and vol:
         else:
-            current_profit = (start_price - last_price) / start_price
+            current_profit = (last_price - start_price) / last_price
             profit = result_analyze_events[1]
             target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
             loss_percent = target_percent * Decimal(1.4)
@@ -300,7 +300,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             sold = False
 
             ticker = analyzed_share[0][1]
-            profit = analyzed_share[0][2]
             start_time = analyzed_share[0][3]
             start_direction = analyzed_share[0][4]
             start_case = analyzed_share[0][5]
@@ -321,6 +320,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
             # если start_direction BUY то определяем target_percent, loss_percent и loss_price
             if start_direction == 'BUY':
+                profit = (last_price - start_price) / last_price
                 target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
                 if loss_percent is None:
                     loss_percent = target_percent * Decimal(1.4)
@@ -338,17 +338,18 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             # если SELL то определяем target_percent (отрицательный), loss_percent и loss_price при покупке не нужны
             else:
                 target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
+                profit = (start_price - last_price) / start_price
                 loss_percent = None
                 loss_price = None
 
             target_price = make_multiple(start_price + start_price * target_percent, min_price_increment)
 
             # если цена поднялась выше порога target<
-            if last_price > target_price and start_direction == 'BUY':
+            if last_price >= target_price and start_direction == 'BUY':
                 sell_case = sell_case + ' target<'
                 sell_strength += 1
             # если цена опустилась ниже порога target>
-            if last_price < target_price and start_direction == 'SELL':
+            if last_price <= target_price and start_direction == 'SELL':
                 buy_case = buy_case + ' target>'
                 buy_strength += 1
 
@@ -382,8 +383,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 else:
                     position_hours = 0
 
-            # если два или больше индикаторов сработало, то торгуем
+            # условия для торговли
             if sell_strength >= 2 \
+                    and (sell_case.split(' ')[-1] == 'target<' or sell_case.split(' ')[-2] == 'target<') \
                     and position_days != 1 and position_days != 0 \
                     and position_hours != 1 and position_hours != 0:
                 sold = check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
@@ -397,7 +399,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                                        'BUY', last_price, buy_case, x_time, max_hi_hours, min_lo_hours, table_name,
                                        buy, fast_buy, sell, vol, req_vol)
 
-            # если условий для торговли не было, то просто обновляем данные в таблице analyzed_shares
+            # если торговли не было, то просто обновляем данные в таблице analyzed_shares
             if sold is False:
                 data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, start_direction, start_case,
                                                start_price, last_price, target_price, loss_price, loss_percent,
