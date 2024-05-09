@@ -103,6 +103,25 @@ def shares2sql(shares_list):
     return
 
 
+def order2sql(order):
+    query = """
+        INSERT INTO orders (order_id, status, ticker, direction, price, quantity, order_time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+    cursor.executemany(query, order)
+    connection.commit()
+    return
+
+
+def order_status2sql(order_id, status):
+    query = f"""
+        UPDATE orders SET status = {status} WHERE order_id = %s
+        """
+    cursor.execute(query, (order_id,))
+    connection.commit()
+    return
+
+
 def clear_table(table_name):
     query = f"DELETE FROM {table_name}"
     cursor.execute(query)

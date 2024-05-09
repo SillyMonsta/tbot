@@ -154,7 +154,7 @@ def request_balance():
     return
 
 
-def get_order_state(order_id):
+def get_order_status(order_id):
     with Client(TOKEN) as client:
         try:
             response = client.orders.get_order_state(
@@ -167,7 +167,7 @@ def get_order_state(order_id):
             write2file.write(
                 str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> limit_order --> InvestError: '
                 + str(error), 'log.txt')
-    return order_id, status
+    return status
 
 
 def market_order(figi, direction, quantity):
@@ -187,6 +187,7 @@ def market_order(figi, direction, quantity):
             write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> market_order DONE: order_id='
                              + str(response.order_id), 'log.txt')
         except InvestError as error:
+            status = None
             write2file.write(
                 str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> market_order --> InvestError: '
                 + str(error), 'log.txt')
@@ -335,7 +336,7 @@ def stream_connection(figi_list):
                             marketdata.trade.quantity,  # quantity для добавления к volume
                         )
                         trades2candles_list.append(one_row)
-                    # если с предыдущей отправки прошло 3 секунды
+                    # если с предыдущей отправки прошло 5 секунды
                     if xtime + datetime.timedelta(seconds=5) < now():
                         # отправляем список трейдо-свечки, по которым была торговля за этот период
                         data2sql.candles2sql(trades2candles_list)

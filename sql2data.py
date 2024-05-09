@@ -82,6 +82,30 @@ def create_events_list():
     return
 
 
+def get_orders_id_state(ticker):
+    query = f'''
+            SELECT *
+            FROM (
+                SELECT * FROM orders
+                WHERE ticker = %s
+            ) subquery
+            WHERE status = 0 OR status = 2 OR status = 4 OR status = 5 OR status = 6
+            '''
+    cursor.execute(query, (ticker,))
+    result = cursor.fetchall()
+    return result
+
+
+def get_rub_balance():
+    cursor.execute(
+        '''
+        SELECT quantity FROM balance WHERE figi = 'rub'
+        '''
+    )
+    results = cursor.fetchall()
+    return results
+
+
 def shares_from_sql():
     cursor.execute(
         '''SELECT *
@@ -128,6 +152,27 @@ def get_last_event(table_name, figi):
             ORDER BY event_time DESC LIMIT 1
             '''
     cursor.execute(query, (figi,))
+    result = cursor.fetchall()
+    return result
+
+
+def get_last_event_ticker(table_name, ticker):
+    query = f'''
+            SELECT * FROM {table_name} 
+            WHERE ticker = %s
+            ORDER BY event_time DESC LIMIT 1
+            '''
+    cursor.execute(query, (ticker,))
+    result = cursor.fetchall()
+    return result
+
+
+def get_last_events_row_cunt(table_name, row_cunt):
+    query = f'''
+            SELECT * FROM {table_name} 
+            ORDER BY event_time DESC LIMIT %s
+            '''
+    cursor.execute(query, (row_cunt, ))
     result = cursor.fetchall()
     return result
 

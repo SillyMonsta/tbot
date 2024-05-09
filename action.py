@@ -9,6 +9,7 @@ import numpy
 import datetime
 from datetime import timedelta
 import write2file
+import time
 
 
 def make_multiple(num, divisor):
@@ -59,6 +60,14 @@ def check_last_event(figi, direction, case, x_price, x_time):
     return return_data
 
 
+def check_trading_status(figi):
+    if tinkoff_requests.request_trading_status(figi) == 5:
+        trading_status = True
+    else:
+        trading_status = False
+    return trading_status
+
+
 def update_last_candle(hi, lo, cl, vo, new_candles):
     hi_new = []
     lo_new = []
@@ -100,6 +109,8 @@ def prepare_stream_connection():
         sql2data.create_balance()
     if sql2data.is_table_exist('analyzed_shares') is False:
         sql2data.create_analyzed_shares()
+    if sql2data.is_table_exist('orders') is False:
+        sql2data.create_orders()
     # проверяем есть ли в базе данных таблица candles если нет, то создаем
     if sql2data.is_table_exist('candles') is False:
         sql2data.create_candles('candles')
@@ -125,9 +136,31 @@ def prepare_stream_connection():
     return figi_list
 
 
+def check_orders(ticker):
+    not_finished_orders = sql2data.get_orders_id_state(ticker)
+    for order in not_finished_orders:
+        order_id = order[0]
+        old_order_status = order[1]
+        order_time = order[6]
+        delta_time = (now() - order_time).total_seconds()
+        # Тестовые ордера специально ставятся со статусом 6, который потом меняется на 7
+        if old_order_status == 6:
+            new_order_status = 7
+        else:
+            # Ордер стоящий больше получаса отменяем
+            if delta_time > 1800:
+                tinkoff_requests.cancel(order_id)
+            # Если ордер не тестовый, то запрашиваем его текущий статус
+            new_order_status = tinkoff_requests.get_order_status(order_id)
+        # Обновляем статус ордера в таблице orders
+        data2sql.order_status2sql(order_id, new_order_status)
+    return
+
+
 def check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
                     direction, last_price, case, x_time, max_hi_hours, min_lo_hours, table_name,
                     buy, fast_buy, sell, vol, req_vol):
+
     if check_last_event(figi, direction, case, last_price, x_time):
         min_price_increment = sql2data.get_info_by_figi('shares', 'min_price_increment', figi)[0][0]
 
@@ -145,13 +178,30 @@ def check_and_trade(figi, ticker, start_time, start_case, start_price, start_dir
             target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
             loss_percent = None
             loss_price = None
-            # if sell and vol:
+            if sell and vol and check_trading_status(figi):
+                order_response = [str(time.time()), 6]
+                # order_response = tinkoff_requests.market_order(figi, direction, vol)
+                order_id = order_response[0]
+                status = order_response[1]
+                if order_id and status:
+                    data2sql.order2sql([(order_id, status, ticker, direction, last_price, vol, x_time)])
+
         else:
             current_profit = (last_price - start_price) / last_price
             profit = result_analyze_events[1]
             target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
             loss_percent = target_percent * Decimal(1.4)
             loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
+            if buy and check_trading_status(figi) and vol < req_vol:
+                dif_vol = req_vol - vol
+                rub_balance = sql2data.get_rub_balance()[0][0]
+                if rub_balance > last_price * dif_vol:
+                    order_response = [str(time.time()), 6]
+                    # order_response = tinkoff_requests.market_order(figi, direction, vol)
+                    order_id = order_response[0]
+                    status = order_response[1]
+                    if order_id and status:
+                        data2sql.order2sql([(order_id, status, ticker, direction, last_price, vol, x_time)])
 
         deal_qnt = result_analyze_events[2]
         trend_far = result_analyze_events[3]
@@ -170,15 +220,10 @@ def check_and_trade(figi, ticker, start_time, start_case, start_price, start_dir
                 [(figi, ticker, current_profit, start_time, start_direction, start_case, start_price,
                   last_price, target_price, loss_price, loss_percent, target_percent,
                   position_hours, position_days, buy, fast_buy, sell, vol, req_vol)])
-
-        if direction != start_direction:
+        else:
             data2sql.analyzed_shares2sql([(figi, ticker, current_profit, x_time, direction, case, last_price,
                                            last_price, target_price, loss_price, loss_percent, target_percent,
                                            position_hours, position_days, buy, fast_buy, sell, vol, req_vol)])
-
-        # trading_status = requests.request_trading_status(figi)
-        # if trading_status == 5:
-
         trade = True
     else:
         trade = False
@@ -313,6 +358,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             sell = analyzed_share[0][16]
             vol = analyzed_share[0][17]
             req_vol = analyzed_share[0][18]
+
+            # проверяем есть в ли таблице orders неисполненные ордера
+            check_orders(ticker)
 
             position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
