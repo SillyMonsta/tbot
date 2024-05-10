@@ -20,9 +20,8 @@ def analyzed_share_string(ticker):
     analyzed_share = sql2data.analyzed_share_by_ticker(ticker)
     share_string = str(ticker + '\n'
                        + 'profit ' + str(round(analyzed_share[0][2], 3)) + '\n'
-                       + 'start_time ' + str(analyzed_share[0][3]) + '\n'
-                       + 'start_direction ' + str(analyzed_share[0][4]) + '\n'
-                       + 'start_case ' + str(analyzed_share[0][5]) + '\n'
+                       + 'start\n' + str(analyzed_share[0][3]) + '\n'
+                       + str(analyzed_share[0][4]) + str(analyzed_share[0][5]) + '\n'
                        + 'start_price ' + str(analyzed_share[0][6]) + '\n'
                        + 'price ' + str(analyzed_share[0][7]) + '\n'
                        + 'target_price ' + str(analyzed_share[0][8]) + '\n'
