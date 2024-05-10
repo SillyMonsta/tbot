@@ -215,8 +215,9 @@ def check_and_trade(figi, ticker, start_time, start_case, start_price, start_dir
                                    start_time)])
 
         if direction == start_direction:
-            data2sql.update_analyzed_shares(ticker, profit, last_price, target_price, loss_price,
-                                            loss_percent, target_percent, position_hours, position_days)
+            to_update = (profit, last_price, target_price, loss_price,
+                         loss_percent, target_percent, position_hours, position_days, ticker)
+            data2sql.update_analyzed_shares(to_update)
         else:
             data2sql.analyzed_shares2sql([(figi, ticker, current_profit, x_time, direction, case, last_price,
                                            last_price, target_price, loss_price, loss_percent, target_percent,
@@ -446,8 +447,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
             # если торговли не было, то просто обновляем данные в таблице analyzed_shares
             if sold is False:
-                data2sql.update_analyzed_shares(ticker, profit, last_price, target_price, loss_price,
-                                                loss_percent, target_percent, position_hours, position_days)
+                to_update = (profit, last_price, target_price, loss_price,
+                             loss_percent, target_percent, position_hours, position_days, ticker)
+                data2sql.update_analyzed_shares(to_update)
 
                 # data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, start_direction, start_case,
                 #                               start_price, last_price, target_price, loss_price, loss_percent,

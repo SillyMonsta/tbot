@@ -83,19 +83,18 @@ def analyzed_shares2sql(analyzed_shares_list):
     return
 
 
-def update_analyzed_shares(ticker, profit, price, target_price, loss_price,
-                           loss_percent, target_percent, position_hours, position_days):
+def update_analyzed_shares(to_update):
     query = f"UPDATE analyzed_shares SET " \
-            f"profit = '{profit}', " \
-            f"price = '{price}', " \
-            f"target_price = '{target_price}', " \
-            f"loss_price = '{loss_price}', " \
-            f"loss_percent = '{loss_percent}', " \
-            f"target_percent = '{target_percent}', " \
-            f"position_hours = '{position_hours}', " \
-            f"position_days = '{position_days}' " \
-            f"WHERE ticker = '{ticker}'"
-    cursor.execute(query)
+            f"profit = %s, " \
+            f"price = %s', " \
+            f"target_price = %s, " \
+            f"loss_price = %s, " \
+            f"loss_percent = %s, " \
+            f"target_percent = %s, " \
+            f"position_hours = %s, " \
+            f"position_days = %s " \
+            f"WHERE ticker = %s"
+    cursor.execute(query, to_update)
     connection.commit()
     return
 
