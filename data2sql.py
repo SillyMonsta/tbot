@@ -84,15 +84,8 @@ def analyzed_shares2sql(analyzed_shares_list):
 
 
 def update_analyzed_shares(to_update):
-    query = f"UPDATE analyzed_shares SET " \
-            f"profit = %s, " \
-            f"price = %s', " \
-            f"target_price = %s, " \
-            f"loss_price = %s, " \
-            f"loss_percent = %s, " \
-            f"target_percent = %s, " \
-            f"position_hours = %s, " \
-            f"position_days = %s " \
+    query = f"UPDATE analyzed_shares SET profit = %s, price = %s, target_price = %s, loss_price = %s, " \
+            f"loss_percent = %s, target_percent = %s, position_hours = %s, position_days = %s " \
             f"WHERE ticker = %s"
     cursor.execute(query, to_update)
     connection.commit()
@@ -226,5 +219,3 @@ def events_list2sql(events_list):
     cursor.executemany(query, events_list)
     connection.commit()
     return
-
-
