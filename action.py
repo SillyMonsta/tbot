@@ -157,9 +157,8 @@ def check_orders(ticker):
     return
 
 
-def check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
-                    direction, last_price, case, x_time, max_hi_hours, min_lo_hours, table_name,
-                    buy, fast_buy, sell, vol, req_vol):
+def check_and_trade(figi, ticker, start_price, start_direction, direction, last_price, case, x_time,
+                    max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol, req_vol):
     if check_last_event(figi, direction, case, last_price, x_time):
         min_price_increment = sql2data.get_info_by_figi('shares', 'min_price_increment', figi)[0][0]
 
@@ -167,7 +166,7 @@ def check_and_trade(figi, ticker, start_time, start_case, start_price, start_dir
                          (min_lo_hours / (max_hi_hours - min_lo_hours))
         position_days = get_price_position(figi, table_name)
 
-        now_case = (direction, last_price, start_time)
+        now_case = (direction, last_price, x_time)
 
         result_analyze_events = analyze_events(figi, now_case)
 
@@ -208,12 +207,6 @@ def check_and_trade(figi, ticker, start_time, start_case, start_price, start_dir
 
         target_price = make_multiple(last_price + last_price * target_percent, min_price_increment)
 
-        price_position_days = get_price_position(figi, table_name)
-
-        data2sql.events_list2sql([(ticker, case, figi, direction, last_price, round(price_position_days, 3),
-                                   round(profit, 3), deal_qnt, round(trend_near, 3), round(trend_far, 3),
-                                   start_time)])
-
         if direction == start_direction:
             to_update = (profit, last_price, target_price, loss_price,
                          loss_percent, target_percent, position_hours, position_days, ticker)
@@ -222,6 +215,9 @@ def check_and_trade(figi, ticker, start_time, start_case, start_price, start_dir
             data2sql.analyzed_shares2sql([(figi, ticker, current_profit, x_time, direction, case, last_price,
                                            last_price, target_price, loss_price, loss_percent, target_percent,
                                            position_hours, position_days, buy, fast_buy, sell, vol, req_vol)])
+
+        data2sql.events_list2sql([(ticker, case, figi, direction, last_price, round(position_days, 3),
+                                   round(profit, 3), deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time)])
         trade = True
     else:
         trade = False
@@ -345,7 +341,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             ticker = analyzed_share[0][1]
             start_time = analyzed_share[0][3]
             start_direction = analyzed_share[0][4]
-            start_case = analyzed_share[0][5]
             start_price = analyzed_share[0][6]
             loss_price = analyzed_share[0][9]
             loss_percent = analyzed_share[0][10]
@@ -372,7 +367,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                     loss_percent = target_percent * Decimal(1.4)
                 # если last_price опустилась ниже loss_price то STOP_LOSS
                 if last_price <= loss_price:
-                    sold = check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
+                    sold = check_and_trade(figi, ticker, start_price, start_direction,
                                            'SELL', last_price, 'STOP_LOSS', x_time, max_hi_hours, min_lo_hours,
                                            table_name, buy, fast_buy, sell, vol, req_vol)
                     # если продажа STOP_LOSS состоялась обнуляем sell_strength
@@ -434,16 +429,14 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                     and (sell_case.split(' ')[-1] == 'target<' or sell_case.split(' ')[-2] == 'target<') \
                     and position_days != 1 and position_days != 0 \
                     and position_hours != 1 and position_hours != 0:
-                sold = check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
-                                       'SELL', last_price, sell_case, x_time, max_hi_hours, min_lo_hours, table_name,
-                                       buy, fast_buy, sell, vol, req_vol)
+                sold = check_and_trade(figi, ticker, start_price, start_direction, 'SELL', last_price, sell_case, x_time,
+                                       max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol, req_vol)
 
             if buy_strength >= 2 \
                     and position_days != 1 and position_days != 0 \
                     and position_hours != 1 and position_hours != 0:
-                sold = check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
-                                       'BUY', last_price, buy_case, x_time, max_hi_hours, min_lo_hours, table_name,
-                                       buy, fast_buy, sell, vol, req_vol)
+                sold = check_and_trade(figi, ticker, start_price, start_direction, 'BUY', last_price, buy_case, x_time,
+                                       max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol, req_vol)
 
             # если торговли не было, то просто обновляем данные в таблице analyzed_shares
             if sold is False:
@@ -451,15 +444,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                              loss_percent, target_percent, position_hours, position_days, ticker)
                 data2sql.update_analyzed_shares(to_update)
 
-                # data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, start_direction, start_case,
-                #                               start_price, last_price, target_price, loss_price, loss_percent,
-                #                               target_percent, position_hours, position_days, buy, fast_buy,
-                #                               sell, vol, req_vol)])
-
         # если акции нет в таблице analyzed_shares
         else:
             ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
-            start_time = x_time.replace(microsecond=0)
             start_price = last_price
             buy = None
             fast_buy = None
@@ -468,16 +455,12 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             req_vol = None
             if sell_strength >= 2:
                 start_direction = 'SELL'
-                start_case = sell_case
-                check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
-                                'SELL', last_price, sell_case, x_time, max_hi_hours, min_lo_hours, table_name,
-                                buy, fast_buy, sell, vol, req_vol)
+                check_and_trade(figi, ticker, start_price, start_direction, 'SELL', last_price, sell_case, x_time,
+                                max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol, req_vol)
             if buy_strength >= 2:
                 start_direction = 'BUY'
-                start_case = buy_case
-                check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
-                                'BUY', last_price, buy_case, x_time, max_hi_hours, min_lo_hours, table_name,
-                                buy, fast_buy, sell, vol, req_vol)
+                check_and_trade(figi, ticker, start_price, start_direction, 'BUY', last_price, buy_case, x_time,
+                                max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol, req_vol)
     return
 
 

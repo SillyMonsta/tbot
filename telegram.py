@@ -20,7 +20,7 @@ def analyzed_share_string(ticker):
     analyzed_share = sql2data.analyzed_share_by_ticker(ticker)
     share_string = str(ticker + '\n'
                        + 'profit ' + str(round(analyzed_share[0][2], 3)) + '\n'
-                       + 'start\n' + str(analyzed_share[0][3]) + '\n'
+                       + 'start at\n' + str(analyzed_share[0][3]) + '\n'
                        + str(analyzed_share[0][4]) + str(analyzed_share[0][5]) + '\n'
                        + 'start_price ' + str(analyzed_share[0][6]) + '\n'
                        + 'price ' + str(analyzed_share[0][7]) + '\n'
@@ -95,10 +95,11 @@ def handle_message(message):
     user_id = message.from_user.id
     # если сообщения от нужного пользователя
     if user_id == 1138331624:
-        feedback = 'Ошибка ввода.\nДоступные команды:\n\n1.Переписать значение в analyzed_shares:\n' \
-                   'rec [ticker] [column] [value]\n\n2.Получить данные по акции из analyzed_shares:\nget [ticker]' \
-                    '\n\n3.Получить последние строки из events_list:\nlastevents [row_count]' \
-                    '\n\n4.Получить из events_list последний event по акции:\nlastevent [ticker]'
+        notice = 'Ошибка ввода.\nДоступные команды:\n\n1.Переписать значение в analyzed_shares:\n' \
+                 'rec [ticker] [column] [value]\n\n2.Получить данные по акции из analyzed_shares:\nget [ticker]' \
+                 '\n\n3.Получить последние строки из events_list:\nevents [row_count]' \
+                 '\n\n4.Получить из events_list последний event по акции:\nlast-event [ticker]'
+        feedback = notice
         try:
             input_columns = ['buy', 'fast_buy', 'sell', 'req_vol']
             if user_message.split(' ')[0] == 'rec':
@@ -124,19 +125,16 @@ def handle_message(message):
                 else:
                     feedback = analyzed_share_string(ticker)
 
-            elif user_message.split(' ')[0] == 'lastevents':
+            elif user_message.split(' ')[0] == 'events':
                 row_count = user_message.split(' ')[1]
                 feedback = last_events_string(int(row_count))
 
-            elif user_message.split(' ')[0] == 'lastevent':
+            elif user_message.split(' ')[0] == 'last-event':
                 ticker = user_message.split(' ')[1]
                 feedback = last_event_ticker_string(ticker)
 
         except Exception:
-            feedback = 'Ошибка ввода.\nДоступные команды:\n\n1.Переписать значение в analyzed_shares:\n' \
-                       'rec [ticker] [column] [value]\n\n2.Получить данные по акции из analyzed_shares:\nget [ticker]' \
-                       '\n\n3.Получить последние строки из events_list:\nlastevents [row_count]' \
-                       '\n\n4.Получить из events_list последний event по акции:\nlastevent [ticker]'
+            feedback = notice
 
         bot.send_message(message.chat.id, feedback)
 
