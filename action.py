@@ -160,7 +160,6 @@ def check_orders(ticker):
 def check_and_trade(figi, ticker, start_time, start_case, start_price, start_direction,
                     direction, last_price, case, x_time, max_hi_hours, min_lo_hours, table_name,
                     buy, fast_buy, sell, vol, req_vol):
-
     if check_last_event(figi, direction, case, last_price, x_time):
         min_price_increment = sql2data.get_info_by_figi('shares', 'min_price_increment', figi)[0][0]
 
@@ -216,10 +215,8 @@ def check_and_trade(figi, ticker, start_time, start_case, start_price, start_dir
                                    start_time)])
 
         if direction == start_direction:
-            data2sql.analyzed_shares2sql(
-                [(figi, ticker, current_profit, start_time, start_direction, start_case, start_price,
-                  last_price, target_price, loss_price, loss_percent, target_percent,
-                  position_hours, position_days, buy, fast_buy, sell, vol, req_vol)])
+            data2sql.update_analyzed_shares(ticker, profit, last_price, target_price, loss_price,
+                                            loss_percent, target_percent, position_hours, position_days)
         else:
             data2sql.analyzed_shares2sql([(figi, ticker, current_profit, x_time, direction, case, last_price,
                                            last_price, target_price, loss_price, loss_percent, target_percent,
@@ -449,10 +446,14 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
             # если торговли не было, то просто обновляем данные в таблице analyzed_shares
             if sold is False:
-                data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, start_direction, start_case,
-                                               start_price, last_price, target_price, loss_price, loss_percent,
-                                               target_percent, position_hours, position_days, buy, fast_buy,
-                                               sell, vol, req_vol)])
+                data2sql.update_analyzed_shares(ticker, profit, last_price, target_price, loss_price,
+                                                loss_percent, target_percent, position_hours, position_days)
+
+                # data2sql.analyzed_shares2sql([(figi, ticker, profit, start_time, start_direction, start_case,
+                #                               start_price, last_price, target_price, loss_price, loss_percent,
+                #                               target_percent, position_hours, position_days, buy, fast_buy,
+                #                               sell, vol, req_vol)])
+
         # если акции нет в таблице analyzed_shares
         else:
             ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
