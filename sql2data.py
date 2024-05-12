@@ -68,7 +68,7 @@ def create_analyzed_shares():
 
 def create_orders():
     cursor.execute("CREATE TABLE orders (order_id VARCHAR(50), status INT, ticker VARCHAR(50), "
-                   "direction VARCHAR(50), price NUMERIC, quantity NUMERIC, order_time TIMESTAMPTZ)")
+                   "direction VARCHAR(50), case VARCHAR(50), price NUMERIC, quantity NUMERIC, order_time TIMESTAMPTZ)")
     return
 
 
@@ -80,6 +80,20 @@ def create_events_list():
     cursor.execute("""CREATE UNIQUE INDEX events_list_figi_idx 
                     ON public.events_list USING btree (figi, event_time, "event_case")""")
     return
+
+
+def get_figi_to_fast_sell(rub_vol):
+    query = """
+            SELECT figi, profit, start_time 
+            FROM analyzed_shares 
+            WHERE vol IS NOT NULL AND vol <> 0 
+                AND price * vol >= %s * 2 
+            ORDER BY profit DESC
+            LIMIT 1
+            """
+    cursor.execute(query, (rub_vol,))
+    result = cursor.fetchall()
+    return result
 
 
 def get_orders_id_state(ticker):

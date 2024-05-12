@@ -53,6 +53,12 @@ def update_analyzed_shares_column_by_figi(figi, column_name, value):
     connection.commit()
 
 
+def update_analyzed_shares_from_telegram(buy, fast_buy, sell, vol, req_vol, ticker):
+    query = f"UPDATE analyzed_shares SET buy = %s, fast_buy = %s, sell = %s, vol = %s, req_vol = %s WHERE ticker = %s"
+    cursor.execute(query, (buy, fast_buy, sell, vol, req_vol, ticker))
+    connection.commit()
+
+
 def analyzed_shares2sql(analyzed_shares_list):
     query = f"""
         INSERT INTO analyzed_shares (figi, ticker, profit, start_time, start_direction, start_case, start_price, 
@@ -114,8 +120,8 @@ def shares2sql(shares_list):
 
 def order2sql(order):
     query = """
-        INSERT INTO orders (order_id, status, ticker, direction, price, quantity, order_time)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO orders (order_id, status, ticker, direction, case, price, quantity, order_time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
     cursor.executemany(query, order)
     connection.commit()

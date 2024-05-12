@@ -96,38 +96,42 @@ def handle_message(message):
     # если сообщения от нужного пользователя
     if user_id == 1138331624:
         notice = 'Ошибка ввода.\nДоступные команды:\n\n1.Переписать значение в analyzed_shares:\n' \
-                 'rec [ticker] [column] [value]\n\n2.Получить данные по акции из analyzed_shares:\nget [ticker]' \
+                 'update [ticker] [buy] [fast_buy] [sell]\n\n2.Получить данные по акции из analyzed_shares:\nget [ticker]' \
                  '\n\n3.Получить последние строки из events_list:\nevents [row_count]' \
                  '\n\n4.Получить из events_list последний event по акции:\nlast-event [ticker]'
         feedback = notice
         try:
-            input_columns = ['buy', 'fast_buy', 'sell', 'req_vol']
-            if user_message.split(' ')[0] == 'rec':
+            if user_message.split(' ')[0] == 'update':
                 ticker = user_message.split(' ')[1]
-                column_name = user_message.split(' ')[2]
-                value = user_message.split(' ')[3]
+                buy = user_message.split(' ')[2]
+                fast_buy = user_message.split(' ')[3]
+                sell = user_message.split(' ')[4]
+                vol = user_message.split(' ')[5]
+                req_vol = user_message.split(' ')[6]
                 tickers = sql2data.analyzed_share_tickers_list()
                 if (ticker,) not in tickers:
-                    feedback = 'Нет такой акции в таблице analyzed_share'
-                elif column_name not in input_columns:
-                    feedback = 'Менять значение можно только в колонках:\nbuy, fast_buy, sell, req_vol'
-                elif not value.isdigit():
-                    feedback = 'Значение должно быть целым числом (INT)'
+                    feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
+
+                elif not vol.isdigit() or not req_vol.isdigit():
+                    feedback = 'Ошибка ввода. vol и req_vol целые числа (INT)'
                 else:
-                    data2sql.update_analyzed_shares_column(ticker, column_name, int(value))
+                    data2sql.update_analyzed_shares_from_telegram(buy, fast_buy, sell, vol, req_vol, ticker)
                     feedback = analyzed_share_string(ticker)
 
             elif user_message.split(' ')[0] == 'get':
                 ticker = user_message.split(' ')[1]
                 tickers = sql2data.analyzed_share_tickers_list()
                 if (ticker,) not in tickers:
-                    feedback = 'нет такой акции в таблице analyzed_share'
+                    feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
                 else:
                     feedback = analyzed_share_string(ticker)
 
             elif user_message.split(' ')[0] == 'events':
                 row_count = user_message.split(' ')[1]
-                feedback = last_events_string(int(row_count))
+                if not row_count.isdigit():
+                    feedback = 'Ошибка ввода. row_count целое число (INT)'
+                else:
+                    feedback = last_events_string(int(row_count))
 
             elif user_message.split(' ')[0] == 'last-event':
                 ticker = user_message.split(' ')[1]
