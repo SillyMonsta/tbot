@@ -614,6 +614,9 @@ def prepare_events_extraction():
     # проверяем есть ли в базе данных таблица candles_extraction если нет, то создаем
     if sql2data.is_table_exist('candles_extraction') is False:
         sql2data.create_candles('candles_extraction')
+    # проверяем есть ли в базе данных таблица orders
+    if sql2data.is_table_exist('orders') is False:
+        sql2data.create_orders()
     # проверяем есть ли в базе данных таблица events_list если нет, то создаем
     if sql2data.is_table_exist('events_list') is False:
         sql2data.create_events_list()
