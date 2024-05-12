@@ -617,6 +617,9 @@ def prepare_events_extraction():
     # проверяем есть ли в базе данных таблица orders
     if sql2data.is_table_exist('orders') is False:
         sql2data.create_orders()
+    # проверяем есть ли в базе данных таблица analyzed_shares
+    if sql2data.is_table_exist('analyzed_shares') is False:
+        sql2data.create_analyzed_shares()
     # проверяем есть ли в базе данных таблица events_list если нет, то создаем
     if sql2data.is_table_exist('events_list') is False:
         sql2data.create_events_list()
