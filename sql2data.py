@@ -69,7 +69,7 @@ def create_analyzed_shares():
 
 def create_orders():
     cursor.execute("CREATE TABLE orders (order_id VARCHAR(50), status INT, ticker VARCHAR(50), "
-                   "direction VARCHAR(50), case VARCHAR(50), price NUMERIC, quantity NUMERIC, order_time TIMESTAMPTZ)")
+                   "direction VARCHAR(50), order_case VARCHAR(50), price NUMERIC, quantity NUMERIC, order_time TIMESTAMPTZ)")
     return
 
 
