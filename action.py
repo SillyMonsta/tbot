@@ -141,9 +141,9 @@ def prepare_stream_connection():
 def check_orders(ticker):
     not_finished_orders = sql2data.get_orders_id_state(ticker)
     for order in not_finished_orders:
-        order_id = order[0]
-        old_order_status = order[1]
-        order_time = order[6]
+        order_id = order[0][0]
+        old_order_status = order[0][1]
+        order_time = order[0][6]
         delta_time = (now() - order_time).total_seconds()
         # Тестовые ордера специально ставятся со статусом 6, который потом меняется на 7
         if old_order_status == 6:
@@ -409,7 +409,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             vol = analyzed_share[0][17]
             req_vol = analyzed_share[0][18]
 
-            # проверяем есть в ли таблице orders неисполненные ордера
+            # проверяем есть ли в таблице orders неисполненные ордера
             check_orders(ticker)
 
             position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
