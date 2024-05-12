@@ -628,8 +628,8 @@ def prepare_events_extraction():
     # проверяем есть ли в базе данных таблица events_list если нет, то создаем
     if sql2data.is_table_exist('events_list') is False:
         sql2data.create_events_list()
-        history_candle_days = [10 + 3, 10 + 8, 10 + 240]
-        date_last_event_time = now() - timedelta(days=10)
+        history_candle_days = [20 + 3, 20 + 8, 20 + 240]
+        date_last_event_time = now() - timedelta(days=20)
     else:
         # если таблица events_list есть, то определяем глубину извлечения по последнему эвенту в events_list
         try:
@@ -639,8 +639,8 @@ def prepare_events_extraction():
             history_candle_days = [days_from_last_event, days_from_last_event, days_from_last_event]
         # если таблица пуста, то запрашиваем на глубину 20 дней
         except IndexError:
-            history_candle_days = [10 + 3, 10 + 8, 10 + 240]
-            date_last_event_time = now() - timedelta(days=10)
+            history_candle_days = [20 + 3, 20 + 8, 20 + 240]
+            date_last_event_time = now() - timedelta(days=20)
     # запускаем events_extraction
     events_extraction(history_candle_days, date_last_event_time)
     return
