@@ -232,7 +232,6 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                     else:
                         tinkoff_requests.request_balance()
 
-
         else:
             current_profit = (last_price - start_price) / last_price
             profit = result_analyze_events[1]
@@ -510,27 +509,31 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
         else:
             ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
             start_price = last_price
+            lot = sql2data.get_info_by_figi('shares', 'lot', figi)[0][0]
+
             if events_extraction_case:
-                lot = sql2data.get_info_by_figi('shares', 'lot', figi)[0][0]
-                rub_balance = sql2data.get_rub_balance()[0][0]
-                data2sql.balance2sql('balance', [('rub', rub_balance + 10000)])
                 buy = 1
                 fast_buy = 0
                 sell = 1
-                vol = 10000 / last_price / lot / 2
-                req_vol = 10000 / last_price / lot
             else:
                 buy = None
                 fast_buy = None
                 sell = None
-                vol = None
-                req_vol = None
+            vol = None
+            req_vol = None
+
             if sell_strength >= 2:
+                if events_extraction_case:
+                    vol = 10000 / last_price / lot / 2
+                    req_vol = 10000 / last_price / lot
                 start_direction = 'SELL'
                 check_and_trade(figi, ticker, start_price, start_direction, 'SELL', last_price, sell_case, x_time,
                                 max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol, req_vol,
                                 events_extraction_case, False)
             if buy_strength >= 2:
+                if events_extraction_case:
+                    rub_balance = sql2data.get_rub_balance()[0][0]
+                    data2sql.balance2sql('balance', [('rub', rub_balance + 10000)])
                 start_direction = 'BUY'
                 check_and_trade(figi, ticker, start_price, start_direction, 'BUY', last_price, buy_case, x_time,
                                 max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol, req_vol,
