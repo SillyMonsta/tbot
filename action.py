@@ -516,7 +516,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 buy = 1
                 fast_buy = 0
                 sell = 1
-                vol = 0
+                vol = 10000 / last_price / lot / 2
                 req_vol = 10000 / last_price / lot
             else:
                 buy = None
