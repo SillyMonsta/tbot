@@ -643,6 +643,7 @@ def prepare_events_extraction():
 
 
 def events_extraction(history_candle_days, time_from):
+    data2sql.update_pid('events_extraction', 1)
     date_start_events_extraction = datetime.datetime.now()
     # достаём весь список акций (торгующихся на МОЭКС)
     shares = sql2data.shares_from_sql()
@@ -682,4 +683,5 @@ def events_extraction(history_candle_days, time_from):
     write2file.write(str(datetime.datetime.now())[:19] +
                      ' events_extraction DONE  time spent: ' +
                      str(datetime.datetime.now() - date_start_events_extraction), 'log.txt')
+    data2sql.update_pid('events_extraction', 0)
     return
