@@ -224,13 +224,14 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                 order_id = order_response[0]
                 status = order_response[1]
                 if order_id and status:
+                    data2sql.order2sql([(order_id, status, ticker, direction, case, last_price, vol, x_time)])
                     if events_extraction_case:
                         rub_balance = sql2data.get_rub_balance()[0][0]
                         data2sql.update_analyzed_shares_column_by_figi(figi, 'vol', 0)
                         data2sql.balance2sql('balance', [('rub', rub_balance + last_price * vol)])
                     else:
                         tinkoff_requests.request_balance()
-                    data2sql.order2sql([(order_id, status, ticker, direction, case, last_price, vol, x_time)])
+
 
         else:
             current_profit = (last_price - start_price) / last_price
@@ -251,12 +252,12 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                     order_id = order_response[0]
                     status = order_response[1]
                     if order_id and status:
+                        data2sql.order2sql([(order_id, status, ticker, direction, case, last_price, dif_vol, x_time)])
                         if events_extraction_case:
                             data2sql.update_analyzed_shares_column_by_figi(figi, 'vol', vol + dif_vol)
                             data2sql.balance2sql('balance', [('rub', rub_balance - last_price * dif_vol)])
                         else:
                             tinkoff_requests.request_balance()
-                        data2sql.order2sql([(order_id, status, ticker, direction, case, last_price, dif_vol, x_time)])
 
         deal_qnt = result_analyze_events[2]
         trend_far = result_analyze_events[3]

@@ -120,7 +120,7 @@ def shares2sql(shares_list):
 
 def order2sql(order):
     query = """
-        INSERT INTO orders (order_id, status, ticker, direction, case, price, quantity, order_time)
+        INSERT INTO orders (order_id, status, ticker, direction, order_case, price, quantity, order_time)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
     cursor.executemany(query, order)
