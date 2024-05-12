@@ -364,3 +364,4 @@ def stream_connection(figi_list):
                 figi_list.append(figi_row[0])
             time.sleep(10)
             stream_connection(figi_list)
+

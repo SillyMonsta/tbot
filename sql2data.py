@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import get_token_file
 
+
 con_conf = get_token_file.get_token('connection_config.txt').split()
 connection = psycopg2.connect(database=con_conf[0],
                               user=con_conf[1],

@@ -166,6 +166,7 @@ def fast_sell(rub_vol, x_time, events_extraction_case):
     ticker = analyzed_share[0][1]
     direction = 'SELL'
     price = analyzed_share[0][7]
+    old_vol = analyzed_share[0][17]
 
     vol = int(rub_vol / price / lot) + 1
 
@@ -177,6 +178,12 @@ def fast_sell(rub_vol, x_time, events_extraction_case):
     order_id = order_response[0]
     status = order_response[1]
     if order_id and status:
+        if events_extraction_case:
+            rub_balance = sql2data.get_rub_balance()[0][0]
+            data2sql.update_analyzed_shares_column_by_figi(figi, 'vol', old_vol - vol)
+            data2sql.balance2sql('balance', [('rub', rub_balance + price * vol)])
+        else:
+            tinkoff_requests.request_balance()
         data2sql.order2sql([(order_id, status, ticker, direction, 'FAST_SELL', price, vol, x_time)])
         sold = True
     else:
@@ -216,6 +223,12 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                 order_id = order_response[0]
                 status = order_response[1]
                 if order_id and status:
+                    if events_extraction_case:
+                        rub_balance = sql2data.get_rub_balance()[0][0]
+                        data2sql.update_analyzed_shares_column_by_figi(figi, 'vol', 0)
+                        data2sql.balance2sql('balance', [('rub', rub_balance + last_price * vol)])
+                    else:
+                        tinkoff_requests.request_balance()
                     data2sql.order2sql([(order_id, status, ticker, direction, case, last_price, vol, x_time)])
 
         else:
@@ -239,10 +252,10 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                     if order_id and status:
                         if events_extraction_case:
                             data2sql.update_analyzed_shares_column_by_figi(figi, 'vol', vol + dif_vol)
+                            data2sql.balance2sql('balance', [('rub', rub_balance - last_price * dif_vol)])
                         else:
                             tinkoff_requests.request_balance()
                         data2sql.order2sql([(order_id, status, ticker, direction, case, last_price, dif_vol, x_time)])
-
 
         deal_qnt = result_analyze_events[2]
         trend_far = result_analyze_events[3]
@@ -497,6 +510,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             start_price = last_price
             if events_extraction_case:
                 lot = sql2data.get_info_by_figi('shares', 'lot', figi)[0][0]
+                rub_balance = sql2data.get_rub_balance()[0][0]
+                data2sql.balance2sql('balance', [('rub', rub_balance + 10000)])
                 buy = 1
                 fast_buy = 0
                 sell = 1
@@ -602,8 +617,8 @@ def prepare_events_extraction():
     # проверяем есть ли в базе данных таблица events_list если нет, то создаем
     if sql2data.is_table_exist('events_list') is False:
         sql2data.create_events_list()
-        history_candle_days = [20 + 3, 20 + 8, 20 + 240]
-        date_last_event_time = now() - timedelta(days=20)
+        history_candle_days = [10 + 3, 10 + 8, 10 + 240]
+        date_last_event_time = now() - timedelta(days=10)
     else:
         # если таблица events_list есть, то определяем глубину извлечения по последнему эвенту в events_list
         try:
@@ -613,8 +628,8 @@ def prepare_events_extraction():
             history_candle_days = [days_from_last_event, days_from_last_event, days_from_last_event]
         # если таблица пуста, то запрашиваем на глубину 20 дней
         except IndexError:
-            history_candle_days = [20 + 3, 20 + 8, 20 + 240]
-            date_last_event_time = now() - timedelta(days=20)
+            history_candle_days = [10 + 3, 10 + 8, 10 + 240]
+            date_last_event_time = now() - timedelta(days=10)
     # запускаем events_extraction
     events_extraction(history_candle_days, date_last_event_time)
     return

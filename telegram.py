@@ -145,3 +145,4 @@ def handle_message(message):
 
 # Запуск бота
 bot.polling()
+

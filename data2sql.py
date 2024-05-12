@@ -225,3 +225,4 @@ def events_list2sql(events_list):
     cursor.executemany(query, events_list)
     connection.commit()
     return
+
