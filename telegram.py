@@ -16,6 +16,14 @@ data2sql.update_pid('telegram', pid)
 write2file.write(str(datetime.datetime.now())[:19] + ' START telegram', 'log.txt')
 
 
+def readlog(name, num_lines):
+    lines = write2file.read(name, num_lines)
+    message = ''
+    for line in lines:
+        message = message + '\n' + line
+    return message
+
+
 def analyzed_share_string(ticker):
     analyzed_share = sql2data.analyzed_share_by_ticker(ticker)
     share_string = str(ticker + '\n'
@@ -98,6 +106,7 @@ def handle_message(message):
         notice = 'Ошибка ввода.\nДоступные команды:\n\n1.Переписать значение в analyzed_shares:\n' \
                  'update [ticker] [buy] [fast_buy] [sell]\n\n2.Получить данные по акции из analyzed_shares:\nget [ticker]' \
                  '\n\n3.Получить последние строки из events_list:\nevents [row_count]' \
+                 '\n\n3.Получить последние строки из log.txt:\nlog [num_lines]' \
                  '\n\n4.Получить из events_list последний event по акции:\nlast-event [ticker]'
         feedback = notice
         try:
@@ -137,6 +146,13 @@ def handle_message(message):
                 ticker = user_message.split(' ')[1]
                 feedback = last_event_ticker_string(ticker)
 
+            elif user_message.split(' ')[0] == 'log':
+                num_lines = user_message.split(' ')[1]
+                if not num_lines.isdigit():
+                    feedback = 'Ошибка ввода. num_lines целое число (INT)'
+                else:
+                    feedback = readlog('log', num_lines)
+
         except Exception:
             feedback = notice
 
@@ -144,5 +160,8 @@ def handle_message(message):
 
 
 # Запуск бота
-bot.polling()
-
+try:
+    bot.polling()
+except Exception as e:
+    write2file.write(str(datetime.datetime.now())[:19] +
+                     ' telegram.py --> bot.polling() --> Exception: ' + str(e), 'log.txt')
