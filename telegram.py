@@ -151,7 +151,7 @@ def handle_message(message):
                 if not num_lines.isdigit():
                     feedback = 'Ошибка ввода. num_lines целое число (INT)'
                 else:
-                    feedback = readlog('log', num_lines)
+                    feedback = readlog('log.txt', num_lines)
 
         except Exception:
             feedback = notice
