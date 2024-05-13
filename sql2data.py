@@ -192,6 +192,16 @@ def get_last_events_row_cunt(table_name, row_cunt):
     return result
 
 
+def get_last_orders_row_cunt(row_cunt):
+    query = f'''
+            SELECT * FROM orders 
+            ORDER BY order_time DESC LIMIT %s
+            '''
+    cursor.execute(query, (row_cunt, ))
+    result = cursor.fetchall()
+    return result
+
+
 def get_last_candle_attribute(table_name, attribute):
     query = f'''SELECT *
             FROM (

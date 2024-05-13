@@ -5,6 +5,7 @@ import data2sql
 import write2file
 import datetime
 import sql2data
+import time
 
 bot_token = get_token_file.get_token('telegram_bot_token.txt').split()[0]
 
@@ -71,6 +72,28 @@ def last_events_string(row_count):
     return events_string
 
 
+def last_orders_string(row_count):
+    orders_string = ''
+    for row_index in range(0, row_count):
+
+        orders = sql2data.get_last_orders_row_cunt(row_count)
+
+        order_status = orders[row_index][1]
+        ticker = orders[row_index][2]
+        direction = orders[row_index][3]
+        order_case = orders[row_index][4]
+        order_price = orders[row_index][5]
+        order_qnt = orders[row_index][6]
+        order_time = orders[row_index][7]
+
+        order_string = (ticker + '     status ' + str(order_status) +
+                        '\n' + direction + ' ' + order_case +
+                        '\nprice ' + str(order_price) + '    qnt ' + str(order_qnt) +
+                        '\n' + str(order_time))
+        orders_string = order_string + '\n\n' + orders_string
+    return orders_string
+
+
 def last_event_ticker_string(ticker):
     event = sql2data.get_last_event_ticker('events_list', ticker)
     ticker = event[0][0]
@@ -95,6 +118,17 @@ def last_event_ticker_string(ticker):
     return event_string
 
 
+def start_telegram_connection():
+    try:
+        bot.polling()
+    except Exception as e:
+        write2file.write(str(datetime.datetime.now())[:19] +
+                         ' telegram_connection --> Exception: ' + str(e),
+                         'log.txt')
+        time.sleep(120)
+        start_telegram_connection()
+
+
 # Обработчик входящих сообщений
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -103,9 +137,11 @@ def handle_message(message):
     user_id = message.from_user.id
     # если сообщения от нужного пользователя
     if user_id == 1138331624:
-        notice = 'Ошибка ввода.\nДоступные команды:\n\n1.Переписать значение в analyzed_shares:\n' \
-                 'update [ticker] [buy] [fast_buy] [sell]\n\n2.Получить данные по акции из analyzed_shares:\nget [ticker]' \
+        notice = 'Ошибка ввода.\nДоступные команды:' \
+                 '\n\n1.Переписать значение в analyzed_shares:\nupdate [ticker] [buy] [fast_buy] [sell]' \
+                 '\n\n2.Получить данные по акции из analyzed_shares:\nget [ticker]' \
                  '\n\n3.Получить последние строки из events_list:\nevents [row_count]' \
+                 '\n\n3.Получить последние строки из orders:\norders [row_count]' \
                  '\n\n3.Получить последние строки из log.txt:\nlog [num_lines]' \
                  '\n\n4.Получить из events_list последний event по акции:\nlast-event [ticker]'
         feedback = notice
@@ -120,7 +156,6 @@ def handle_message(message):
                 tickers = sql2data.analyzed_share_tickers_list()
                 if (ticker,) not in tickers:
                     feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
-
                 elif not vol.isdigit() or not req_vol.isdigit():
                     feedback = 'Ошибка ввода. vol и req_vol целые числа (INT)'
                 else:
@@ -142,6 +177,13 @@ def handle_message(message):
                 else:
                     feedback = last_events_string(int(row_count))
 
+            elif user_message.split(' ')[0] == 'orders':
+                row_count = user_message.split(' ')[1]
+                if not row_count.isdigit():
+                    feedback = 'Ошибка ввода. row_count целое число (INT)'
+                else:
+                    feedback = last_orders_string(int(row_count))
+
             elif user_message.split(' ')[0] == 'last-event':
                 ticker = user_message.split(' ')[1]
                 feedback = last_event_ticker_string(ticker)
@@ -159,9 +201,5 @@ def handle_message(message):
         bot.send_message(message.chat.id, feedback)
 
 
-# Запуск бота
-try:
-    bot.polling()
-except Exception as e:
-    write2file.write(str(datetime.datetime.now())[:19] +
-                     ' telegram.py --> bot.polling() --> Exception: ' + str(e), 'log.txt')
+# Запуск телеграм соединения
+start_telegram_connection()

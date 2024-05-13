@@ -194,8 +194,8 @@ def fast_sell(rub_vol, x_time, events_extraction_case):
 
 
 def check_and_trade(figi, ticker, start_price, start_direction, direction, last_price, case, x_time,
-                    max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol, req_vol, events_extraction_case,
-                    true_analyzed_shares):
+                    max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol, req_vol,
+                    events_extraction_case, true_analyzed_shares):
     if check_last_event(figi, direction, case, last_price, x_time):
         min_price_increment = sql2data.get_info_by_figi('shares', 'min_price_increment', figi)[0][0]
         lot = sql2data.get_info_by_figi('shares', 'lot', figi)[0][0]
@@ -428,7 +428,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                     buy = 0
                     sold = check_and_trade(figi, ticker, start_price, start_direction,
                                            'SELL', last_price, 'STOP_LOSS', x_time, max_hi_hours, min_lo_hours,
-                                           table_name, buy, fast_buy, sell, vol, req_vol, events_extraction_case)
+                                           table_name, buy, fast_buy, sell, vol, req_vol, events_extraction_case, True)
                     # если продажа STOP_LOSS состоялась обнуляем sell_strength
                     if sold and sell_strength >= 2:
                         sell_strength = 0
