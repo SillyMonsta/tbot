@@ -239,7 +239,7 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
             loss_percent = target_percent * Decimal(1.4)
             loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
             if buy and check_trading_status(figi, events_extraction_case) and vol < req_vol:
-                dif_vol = req_vol - vol
+                dif_vol = int(req_vol - vol)
                 rub_balance = sql2data.get_rub_balance()[0][0]
                 if rub_balance > last_price * dif_vol:
                     if events_extraction_case:
@@ -515,8 +515,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 buy = 1
                 fast_buy = 0
                 sell = 1
-                vol = 10000 / last_price / lot / 2
-                req_vol = 10000 / last_price / lot
+                vol = int(10000 / last_price / lot / 2)
+                req_vol = int(10000 / last_price / lot)
             else:
                 buy = None
                 fast_buy = None

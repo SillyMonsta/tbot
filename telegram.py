@@ -14,7 +14,6 @@ bot = telebot.TeleBot(bot_token)
 # вписываем в таблицу "pid" pid процесса
 pid = os.getpid()
 data2sql.update_pid('telegram', pid)
-write2file.write(str(datetime.datetime.now())[:19] + ' START telegram', 'log.txt')
 
 
 def readlog(name, num_lines):
@@ -120,6 +119,7 @@ def last_event_ticker_string(ticker):
 
 def start_telegram_connection():
     try:
+        write2file.write(str(datetime.datetime.now())[:19] + ' START telegram', 'log.txt')
         bot.polling()
     except Exception as e:
         write2file.write(str(datetime.datetime.now())[:19] +
