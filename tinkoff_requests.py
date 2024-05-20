@@ -160,7 +160,6 @@ def get_order_status(order_id):
             response = client.orders.get_order_state(
                 account_id=account_id,
                 order_id=order_id,
-                order_type=OrderType.ORDER_TYPE_MARKET
             )
             status = response.execution_report_status.value
         except InvestError as error:
@@ -171,13 +170,17 @@ def get_order_status(order_id):
 
 
 def market_order(figi, direction, quantity):
+    if direction == 'SELL':
+        order_direction = 2
+    else:
+        order_direction = 1
     order_id = str(time.time())
     with Client(TOKEN) as client:
         try:
             response = client.orders.post_order(
                 figi=figi,
                 quantity=quantity,
-                direction=direction,
+                direction=order_direction,
                 account_id=account_id,
                 order_type=OrderType.ORDER_TYPE_MARKET,
                 order_id=order_id
@@ -195,6 +198,10 @@ def market_order(figi, direction, quantity):
 
 
 def limit_order(figi, direction, quantity, order_price):
+    if direction == 'SELL':
+        order_direction = 2
+    else:
+        order_direction = 1
     order_id = str(time.time())
     with Client(TOKEN) as client:
         try:
@@ -202,7 +209,7 @@ def limit_order(figi, direction, quantity, order_price):
                 figi=figi,
                 quantity=quantity,
                 price=decimal_to_quotation(Decimal(order_price)),  # !!!цена за лот (order_price = last_price * lot)!!!
-                direction=direction,
+                direction=order_direction,
                 account_id=account_id,
                 order_type=OrderType.ORDER_TYPE_LIMIT,
                 order_id=order_id
@@ -364,4 +371,3 @@ def stream_connection(figi_list):
                 figi_list.append(figi_row[0])
             time.sleep(10)
             stream_connection(figi_list)
-
