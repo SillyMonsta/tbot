@@ -220,7 +220,7 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                     order_response = [str(time.time()), 6]
                 else:
                     # реальный ордер
-                    order_response = tinkoff_requests.market_order(figi, direction, vol / lot)
+                    order_response = tinkoff_requests.market_order(figi, direction, int(vol / lot))
                 order_id = order_response[0]
                 status = order_response[1]
                 if order_id and status:
@@ -247,7 +247,7 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                         order_response = [str(time.time()), 6]
                     else:
                         # реальный ордер
-                        order_response = tinkoff_requests.market_order(figi, direction, dif_vol / lot)
+                        order_response = tinkoff_requests.market_order(figi, direction, int(dif_vol / lot))
                     order_id = order_response[0]
                     status = order_response[1]
                     if order_id and status:
