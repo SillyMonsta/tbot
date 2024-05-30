@@ -122,9 +122,9 @@ def start_telegram_connection():
         write2file.write(str(datetime.datetime.now())[:19] + ' START telegram', 'log.txt')
         bot.polling()
     except Exception as e:
-        write2file.write(str(datetime.datetime.now())[:19] +
-                         ' telegram_connection --> Exception: ' + str(e),
-                         'log.txt')
+        #write2file.write(str(datetime.datetime.now())[:19] +
+        #                 ' telegram_connection --> Exception: ' + str(e),
+        #                 'log.txt')
         time.sleep(120)
         start_telegram_connection()
 
