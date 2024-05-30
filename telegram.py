@@ -138,7 +138,7 @@ def handle_message(message):
     # если сообщения от нужного пользователя
     if user_id == 1138331624:
         notice = 'Ошибка ввода.\nДоступные команды:' \
-                 '\n\n1.Переписать значение в analyzed_shares:\nupdate [ticker] [buy] [fast_buy] [sell]' \
+                 '\n\n1.Переписать значение в analyzed_shares:\nupdate [ticker] [buy] [fast_buy] [sell] [vol] [req_vol]' \
                  '\n\n2.Получить данные по акции из analyzed_shares:\nget [ticker]' \
                  '\n\n3.Получить последние строки из events_list:\nevents [row_count]' \
                  '\n\n3.Получить последние строки из orders:\norders [row_count]' \
