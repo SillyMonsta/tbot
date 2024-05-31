@@ -187,8 +187,7 @@ def market_order(figi, direction, quantity):
             )
             status = response.execution_report_status.value
             order_id = response.order_id
-            write2file.write(str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> market_order DONE: order_id='
-                             + str(response.order_id), 'log.txt')
+
         except InvestError as error:
             status = None
             write2file.write(
