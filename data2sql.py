@@ -128,6 +128,16 @@ def order2sql(order):
     return
 
 
+def trade2sql(trade):
+    query = """
+        INSERT INTO trades (figi, direction, price, quantity, trade_time)
+            VALUES (%s, %s, %s, %s, %s)
+        """
+    cursor.executemany(query, trade)
+    connection.commit()
+    return
+
+
 def order_status2sql(order_id, status):
     query = f"""
         UPDATE orders SET status = {status} WHERE order_id = %s

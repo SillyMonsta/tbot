@@ -47,6 +47,12 @@ def create_shares():
     return
 
 
+def create_trades():
+    cursor.execute("CREATE TABLE trades (figi VARCHAR(50), direction VARCHAR(50), price NUMERIC,"
+                   "quantity NUMERIC, trade_time TIMESTAMPTZ)")
+    return
+
+
 def create_candles(table_name):
     cursor.execute(f"CREATE TABLE {table_name} (figi VARCHAR(50), interval INT,"
                    f"open NUMERIC, high NUMERIC, low NUMERIC, close NUMERIC,"

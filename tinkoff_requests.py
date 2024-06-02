@@ -328,18 +328,24 @@ def stream_connection(figi_list):
             for marketdata in client.market_data_stream.market_data_stream(request_iterator()):
                 if marketdata.trade:
                     price = units_nano_merge(marketdata.trade.price.units, marketdata.trade.price.nano)
+                    trade_time = marketdata.trade.time
+                    trade_direction = marketdata.trade.direction
+                    trade_figi = marketdata.trade.figi
+                    trade_quantity = marketdata.trade.quantity
+                    # пишем трэйд в таблицу
+                    data2sql.trade2sql((trade_figi, trade_direction, price, trade_quantity, trade_time))
                     # формируем данные для запроса sql по обновлению свечек для двух интервалов
                     for x in [4, 5]:
                         one_row = (
-                            marketdata.trade.figi,  # figi
+                            trade_figi,  # figi
                             x,  # interval
                             price,  # price в качестве open
                             price,  # price в качестве high
                             price,  # price в качестве low
                             price,  # price в качестве close
-                            marketdata.trade.quantity,  # quantity в качестве volume
-                            adapt_date4interval(marketdata.trade.time, x),  # rounded time
-                            marketdata.trade.quantity,  # quantity для добавления к volume
+                            trade_quantity,  # quantity в качестве volume
+                            adapt_date4interval(trade_time, x),  # rounded time
+                            trade_quantity,  # quantity для добавления к volume
                         )
                         trades2candles_list.append(one_row)
                     # если с предыдущей отправки прошло 5 секунды

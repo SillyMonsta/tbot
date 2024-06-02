@@ -113,6 +113,8 @@ def prepare_stream_connection():
         sql2data.create_analyzed_shares()
     if sql2data.is_table_exist('orders') is False:
         sql2data.create_orders()
+    if sql2data.is_table_exist('trades') is False:
+        sql2data.create_trades()
     # проверяем есть ли в базе данных таблица candles если нет, то создаем
     if sql2data.is_table_exist('candles') is False:
         sql2data.create_candles('candles')
