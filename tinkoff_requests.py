@@ -324,55 +324,55 @@ def stream_connection(figi_list):
     xtime = now()
     trades2candles_list = []
     with Client(TOKEN) as client:
-        try:
-            for marketdata in client.market_data_stream.market_data_stream(request_iterator()):
-                if marketdata.trade:
-                    price = units_nano_merge(marketdata.trade.price.units, marketdata.trade.price.nano)
-                    trade_time = marketdata.trade.time
-                    trade_direction = marketdata.trade.direction
-                    trade_figi = marketdata.trade.figi
-                    trade_quantity = marketdata.trade.quantity
-                    # пишем трэйд в таблицу
-                    data2sql.trade2sql((trade_figi, trade_direction, price, trade_quantity, trade_time))
-                    # формируем данные для запроса sql по обновлению свечек для двух интервалов
-                    for x in [4, 5]:
-                        one_row = (
-                            trade_figi,  # figi
-                            x,  # interval
-                            price,  # price в качестве open
-                            price,  # price в качестве high
-                            price,  # price в качестве low
-                            price,  # price в качестве close
-                            trade_quantity,  # quantity в качестве volume
-                            adapt_date4interval(trade_time, x),  # rounded time
-                            trade_quantity,  # quantity для добавления к volume
-                        )
-                        trades2candles_list.append(one_row)
-                    # если с предыдущей отправки прошло 5 секунды
-                    if xtime + datetime.timedelta(seconds=5) < now():
-                        # отправляем список трейдо-свечки, по которым была торговля за этот период
-                        data2sql.candles2sql(trades2candles_list)
-                        # создаём временный список фиги
-                        temp_figi_list = [] + figi_list
-                        # создаём список фиг по которым были сделки за этот период, чтобы одни и те-же фиги не повторялись
-                        for row_trade in trades2candles_list:
-                            figi_to_analyze = row_trade[0]
-                            if figi_to_analyze in temp_figi_list:
-                                temp_figi_list.remove(figi_to_analyze)
-                                # анализируем свечки с помощью индикаторов, ищем удачные моменты для торговли
-                                action.analyze_candles(figi_to_analyze, False, now(), 'candles')
-                        # обнуляем время и список для начала нового периода
-                        xtime = now()
-                        trades2candles_list = []
+        #try:
+        for marketdata in client.market_data_stream.market_data_stream(request_iterator()):
+            if marketdata.trade:
+                price = units_nano_merge(marketdata.trade.price.units, marketdata.trade.price.nano)
+                trade_time = marketdata.trade.time
+                trade_direction = marketdata.trade.direction
+                trade_figi = marketdata.trade.figi
+                trade_quantity = marketdata.trade.quantity
+                # пишем трэйд в таблицу
+                data2sql.trade2sql((trade_figi, trade_direction, price, trade_quantity, trade_time))
+                # формируем данные для запроса sql по обновлению свечек для двух интервалов
+                for x in [4, 5]:
+                    one_row = (
+                        trade_figi,  # figi
+                        x,  # interval
+                        price,  # price в качестве open
+                        price,  # price в качестве high
+                        price,  # price в качестве low
+                        price,  # price в качестве close
+                        trade_quantity,  # quantity в качестве volume
+                        adapt_date4interval(trade_time, x),  # rounded time
+                        trade_quantity,  # quantity для добавления к volume
+                    )
+                    trades2candles_list.append(one_row)
+                # если с предыдущей отправки прошло 5 секунды
+                if xtime + datetime.timedelta(seconds=5) < now():
+                    # отправляем список трейдо-свечки, по которым была торговля за этот период
+                    data2sql.candles2sql(trades2candles_list)
+                    # создаём временный список фиги
+                    temp_figi_list = [] + figi_list
+                    # создаём список фиг по которым были сделки за этот период, чтобы одни и те-же фиги не повторялись
+                    for row_trade in trades2candles_list:
+                        figi_to_analyze = row_trade[0]
+                        if figi_to_analyze in temp_figi_list:
+                            temp_figi_list.remove(figi_to_analyze)
+                            # анализируем свечки с помощью индикаторов, ищем удачные моменты для торговли
+                            action.analyze_candles(figi_to_analyze, False, now(), 'candles')
+                    # обнуляем время и список для начала нового периода
+                    xtime = now()
+                    trades2candles_list = []
 
-        except Exception as e:
-            write2file.write(str(datetime.datetime.now())[:19] +
-                             ' tinkoff_requests.py --> stream_connection --> Exception: '
-                             + str(e), 'log.txt')
-            # формируем список всех акций
-            shares = sql2data.shares_from_sql()
-            figi_list = []
-            for figi_row in shares:
-                figi_list.append(figi_row[0])
-            time.sleep(10)
-            stream_connection(figi_list)
+        #except Exception as e:
+        #    write2file.write(str(datetime.datetime.now())[:19] +
+        #                     ' tinkoff_requests.py --> stream_connection --> Exception: '
+        #                     + str(e), 'log.txt')
+        #    # формируем список всех акций
+        #    shares = sql2data.shares_from_sql()
+        #    figi_list = []
+        #    for figi_row in shares:
+         #       figi_list.append(figi_row[0])
+         #   time.sleep(10)
+         #   stream_connection(figi_list)
