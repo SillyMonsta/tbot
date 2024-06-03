@@ -333,7 +333,9 @@ def stream_connection(figi_list):
                 trade_figi = marketdata.trade.figi
                 trade_quantity = marketdata.trade.quantity
                 # пишем трэйд в таблицу
-                data2sql.trade2sql((trade_figi, trade_direction, price, trade_quantity, trade_time))
+                trade = (trade_figi, trade_direction, price, trade_quantity, trade_time)
+                print(trade)
+                data2sql.trade2sql(trade)
                 # формируем данные для запроса sql по обновлению свечек для двух интервалов
                 for x in [4, 5]:
                     one_row = (
