@@ -329,7 +329,12 @@ def stream_connection(figi_list):
                 if marketdata.trade:
                     price = units_nano_merge(marketdata.trade.price.units, marketdata.trade.price.nano)
                     trade_time = marketdata.trade.time
-                    trade_direction = marketdata.trade.direction
+                    if marketdata.trade.direction == 1:
+                        trade_direction = 'BUY'
+                    elif marketdata.trade.direction == 2:
+                        trade_direction = 'SELL'
+                    else:
+                        trade_direction = ''
                     trade_figi = marketdata.trade.figi
                     trade_quantity = marketdata.trade.quantity
                     # записываем сделку в таблицу
