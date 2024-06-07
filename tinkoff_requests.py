@@ -339,6 +339,8 @@ def stream_connection(figi_list):
                     trade_quantity = marketdata.trade.quantity
                     # записываем сделку в таблицу
                     data2sql.trade2sql([(trade_figi, trade_direction, price, trade_quantity, trade_time)])
+                    # отсчитываем 5 минут назад от последней сделки
+                    time_from = trade_time-datetime.timedelta(seconds=300)
                     # формируем данные для запроса sql по обновлению свечек для двух интервалов
                     for x in [4, 5]:
                         one_row = (
@@ -355,6 +357,8 @@ def stream_connection(figi_list):
                         trades2candles_list.append(one_row)
                     # если с предыдущей отправки прошло 5 секунды
                     if xtime + datetime.timedelta(seconds=5) < now():
+                        # удаляем все сделки (строки из таблицы) старше 5 минут (time_from)
+                        sql2data.delete_old_trades(time_from)
                         # отправляем список трейдо-свечки, по которым была торговля за этот период
                         data2sql.candles2sql(trades2candles_list)
                         # создаём временный список фиги

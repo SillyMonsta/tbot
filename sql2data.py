@@ -3,7 +3,6 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import get_token_file
 
-
 con_conf = get_token_file.get_token('connection_config.txt').split()
 connection = psycopg2.connect(database=con_conf[0],
                               user=con_conf[1],
@@ -12,6 +11,19 @@ connection = psycopg2.connect(database=con_conf[0],
                               port=con_conf[4])
 connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 cursor = connection.cursor()
+
+
+def vacuum_full():
+    cursor.execute("VACUUM FULL;")
+    return
+
+
+def delete_old_trades(time_from):
+    query = """
+            DELETE FROM trades WHERE trade_time < %s
+            """
+    cursor.execute(query, (time_from,))
+    return
 
 
 def is_table_exist(table_name):
@@ -60,6 +72,16 @@ def create_candles(table_name):
     cursor.execute(f"""CREATE UNIQUE INDEX {table_name}_candle_time_idx ON public.{table_name} 
                       USING btree (candle_time, figi, "interval")""")
     return
+
+
+def get_trades(figi):
+    query = '''
+            SELECT * FROM trades
+            WHERE figi = %s
+            '''
+    cursor.execute(query, (figi, ))
+    result = cursor.fetchall()
+    return result
 
 
 def create_analyzed_shares():
@@ -193,7 +215,7 @@ def get_last_events_row_cunt(table_name, row_cunt):
             SELECT * FROM {table_name} 
             ORDER BY event_time DESC LIMIT %s
             '''
-    cursor.execute(query, (row_cunt, ))
+    cursor.execute(query, (row_cunt,))
     result = cursor.fetchall()
     return result
 
@@ -203,7 +225,7 @@ def get_last_orders_row_cunt(row_cunt):
             SELECT * FROM orders 
             ORDER BY order_time DESC LIMIT %s
             '''
-    cursor.execute(query, (row_cunt, ))
+    cursor.execute(query, (row_cunt,))
     result = cursor.fetchall()
     return result
 
