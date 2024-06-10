@@ -18,11 +18,11 @@ def vacuum_full():
     return
 
 
-def delete_old_trades(time_from):
+def delete_old_trades(figi, time_from):
     query = """
-            DELETE FROM trades WHERE trade_time < %s
+            DELETE FROM trades WHERE figi = %s AND trade_time < %s
             """
-    cursor.execute(query, (time_from,))
+    cursor.execute(query, (figi, time_from,))
     return
 
 
