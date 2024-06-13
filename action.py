@@ -320,9 +320,9 @@ def calculate_ave_trades(figi, ticker):
         sum_buy = vol_buys
     data2sql.ave_trades2sql([(figi, ticker, ave_sell, ave_buy, sum_sell, sum_buy)])
 
-    if sells > ave_sell:
+    if sells > ave_sell*5:
         write2file.write(str(datetime.datetime.now())[:19] + '  ' + str(ticker) + '  LOT_SELLS  ' + str(price), 'log.txt')
-    if buys > ave_buy:
+    if buys > ave_buy*5:
         write2file.write(str(datetime.datetime.now())[:19] + '  ' + str(ticker) + '  LOT_BUYS  ' + str(price), 'log.txt')
 
     print(price)
