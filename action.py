@@ -147,6 +147,7 @@ def check_orders(ticker):
     for order in not_finished_orders:
         order_id = order[0]
         old_order_status = order[1]
+        direction = order[3]
         order_time = order[7]
         delta_time = (now() - order_time).total_seconds()
         # Тестовые ордера специально ставятся со статусом 6, который потом меняется на 7
@@ -159,7 +160,11 @@ def check_orders(ticker):
             # Если ордер не тестовый, то запрашиваем его текущий статус
             new_order_status = tinkoff_requests.get_order_status(order_id)
             if new_order_status == 1:
-                tinkoff_requests.request_balance()
+                if direction == 'SELL':
+                    data2sql.update_analyzed_shares_column(ticker, 'vol', 0)
+                    tinkoff_requests.request_balance()
+                else:
+                    tinkoff_requests.request_balance()
         # Обновляем статус ордера в таблице orders
         data2sql.order_status2sql(order_id, new_order_status)
     return
@@ -220,7 +225,8 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
             target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
             loss_percent = None
             loss_price = None
-            if sell and vol and check_trading_status(figi, events_extraction_case):
+            if sell and vol and check_trading_status(figi, events_extraction_case) \
+                    and x_time.time() > datetime.time(10, 10):
                 if events_extraction_case:
                     # тестовый ордер
                     order_response = [str(time.time()), 6]
@@ -237,6 +243,7 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                         data2sql.balance2sql('balance', [('rub', rub_balance + last_price * vol)])
                     else:
                         if status == 1:
+                            data2sql.update_analyzed_shares_column(ticker, 'vol', 0)
                             tinkoff_requests.request_balance()
 
         else:
@@ -245,7 +252,8 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
             target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
             loss_percent = target_percent * Decimal(1.4)
             loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
-            if buy and check_trading_status(figi, events_extraction_case) and vol < req_vol:
+            if buy and check_trading_status(figi, events_extraction_case) and vol < req_vol \
+                    and x_time.time() > datetime.time(10, 10):
                 dif_vol = int(req_vol - vol)
                 rub_balance = sql2data.get_rub_balance()[0][0]
                 if rub_balance > last_price * dif_vol:
@@ -475,7 +483,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
 
-            # вычисляем среднее кол-во сделок за промежуток, проверяем текущее кол-во сделок
+            # вычисляем среднее кол-во сделок за промежуток, проверяем текущее кол-во сделок за промежуток
             calculate_ave_trades(figi, ticker)
 
             # если start_direction BUY то определяем target_percent, loss_percent и loss_price
