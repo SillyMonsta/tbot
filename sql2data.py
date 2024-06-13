@@ -65,6 +65,13 @@ def create_trades():
     return
 
 
+def create_ave_trades():
+    cursor.execute("CREATE TABLE ave_trades (figi VARCHAR(50), ticker VARCHAR(50), ave_sell NUMERIC,"
+                   "ave_buy NUMERIC, sum_sell NUMERIC, sum_buy NUMERIC)")
+    cursor.execute("""CREATE UNIQUE INDEX ave_trades_figi_idx ON public.ave_trades USING btree (figi)""")
+    return
+
+
 def create_candles(table_name):
     cursor.execute(f"CREATE TABLE {table_name} (figi VARCHAR(50), interval INT,"
                    f"open NUMERIC, high NUMERIC, low NUMERIC, close NUMERIC,"
@@ -72,16 +79,6 @@ def create_candles(table_name):
     cursor.execute(f"""CREATE UNIQUE INDEX {table_name}_candle_time_idx ON public.{table_name} 
                       USING btree (candle_time, figi, "interval")""")
     return
-
-
-def get_trades(figi):
-    query = '''
-            SELECT * FROM trades
-            WHERE figi = %s
-            '''
-    cursor.execute(query, (figi, ))
-    result = cursor.fetchall()
-    return result
 
 
 def create_analyzed_shares():
@@ -109,6 +106,27 @@ def create_events_list():
     cursor.execute("""CREATE UNIQUE INDEX events_list_figi_idx 
                     ON public.events_list USING btree (figi, event_time, "event_case")""")
     return
+
+
+def get_trades(figi):
+    query = '''
+            SELECT * FROM trades
+            WHERE figi = %s
+            ORDER BY trade_time DESC
+            '''
+    cursor.execute(query, (figi, ))
+    result = cursor.fetchall()
+    return result
+
+
+def get_ave_trades(figi):
+    query = '''
+            SELECT * FROM ave_trades
+            WHERE figi = %s
+            '''
+    cursor.execute(query, (figi, ))
+    result = cursor.fetchall()
+    return result
 
 
 def get_figi_to_fast_sell(rub_vol):

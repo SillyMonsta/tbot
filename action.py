@@ -115,6 +115,8 @@ def prepare_stream_connection():
         sql2data.create_orders()
     if sql2data.is_table_exist('trades') is False:
         sql2data.create_trades()
+    if sql2data.is_table_exist('ave_trades') is False:
+        sql2data.create_ave_trades()
     # проверяем есть ли в базе данных таблица candles если нет, то создаем
     if sql2data.is_table_exist('candles') is False:
         sql2data.create_candles('candles')
@@ -288,6 +290,45 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
     return trade
 
 
+def calculate_ave_trades(figi, ticker):
+    trades_for_period = sql2data.get_trades(figi)
+    price = trades_for_period[0][2]
+    sells = 0
+    vol_sells = 0
+    buys = 0
+    vol_buys = 0
+    for trade in trades_for_period:
+        direction = trade[1]
+        quantity = trade[3]
+        if direction == 'SELL':
+            sells += 1
+            vol_sells = vol_sells + quantity
+        elif direction == 'BUY':
+            buys += 1
+            vol_buys = vol_buys + quantity
+
+    ave_trade = sql2data.get_ave_trades(figi)
+    if ave_trade:
+        ave_sell = (ave_trade[0][2] + sells) / 2
+        ave_buy = (ave_trade[0][3] + buys) / 2
+        sum_sell = (ave_trade[0][4] + vol_sells) / 2
+        sum_buy = (ave_trade[0][5] + vol_buys) / 2
+    else:
+        ave_sell = sells
+        ave_buy = buys
+        sum_sell = vol_sells
+        sum_buy = vol_buys
+    data2sql.ave_trades2sql([(figi, ticker, ave_sell, ave_buy, sum_sell, sum_buy)])
+
+    if sells > ave_sell:
+        write2file.write(str(datetime.datetime.now())[:19] + '  ' + str(ticker) + '  LOT_SELLS  ' + str(price), 'log.txt')
+    if buys > ave_buy:
+        write2file.write(str(datetime.datetime.now())[:19] + '  ' + str(ticker) + '  LOT_BUYS  ' + str(price), 'log.txt')
+
+    print(price)
+    return
+
+
 def analyse_ohlcv(ohlcv):
     sell_strength = 0
     buy_strength = 0
@@ -421,6 +462,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             position_hours = (last_price / (max_hi_hours - min_lo_hours)) - \
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
+
+            # вычисляем среднее кол-во сделок за промежуток, проверяем текущее кол-во сделок
+            calculate_ave_trades(figi, ticker)
 
             # если start_direction BUY то определяем target_percent, loss_percent и loss_price
             if start_direction == 'BUY':
