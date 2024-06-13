@@ -320,9 +320,9 @@ def calculate_ave_trades(figi, ticker):
         sum_buy = vol_buys
     data2sql.ave_trades2sql([(figi, ticker, ave_sell, ave_buy, sum_sell, sum_buy)])
 
-    if sells > ave_sell * Decimal(1.75):
+    if sells > ave_sell * Decimal(2):
         data2sql.events_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, 0, 0, 0, 0, 0, now())])
-    if buys > ave_buy * Decimal(1.75):
+    if buys > ave_buy * Decimal(2):
         data2sql.events_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, 0, 0, 0, 0, 0, now())])
 
     return
