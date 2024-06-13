@@ -67,7 +67,7 @@ def create_trades():
 
 def create_ave_trades():
     cursor.execute("CREATE TABLE ave_trades (figi VARCHAR(50), ticker VARCHAR(50), ave_sell NUMERIC,"
-                   "ave_buy NUMERIC, sum_sell NUMERIC, sum_buy NUMERIC)")
+                   "ave_buy NUMERIC, sum_sell NUMERIC, sum_buy NUMERIC, lot_sells INT, lot_buys INT)")
     cursor.execute("""CREATE UNIQUE INDEX ave_trades_figi_idx ON public.ave_trades USING btree (figi)""")
     return
 

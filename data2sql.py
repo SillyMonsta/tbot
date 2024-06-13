@@ -139,14 +139,16 @@ def trade2sql(trade):
 
 
 def ave_trades2sql(ave_trades_list):
-    query = f"""
-        INSERT INTO ave_trades (figi, ticker, ave_sell, ave_buy, sum_sell, sum_buy)
-            VALUES (%s, %s, %s, %s, %s, %s)
+    query = """
+        INSERT INTO ave_trades (figi, ticker, ave_sell, ave_buy, sum_sell, sum_buy, lot_sells, lot_buys)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT(figi) DO UPDATE SET
                 ave_sell = EXCLUDED.ave_sell,
                 ave_buy = EXCLUDED.ave_buy,
                 sum_sell = EXCLUDED.sum_sell,
-                sum_buy = EXCLUDED.sum_buy
+                sum_buy = EXCLUDED.sum_buy,
+                lot_sells = EXCLUDED.lot_sells,
+                lot_buys = EXCLUDED.lot_buys
         """
     cursor.executemany(query, ave_trades_list)
     connection.commit()
