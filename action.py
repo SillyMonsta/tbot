@@ -117,6 +117,8 @@ def prepare_stream_connection():
         sql2data.create_trades()
     if sql2data.is_table_exist('ave_trades') is False:
         sql2data.create_ave_trades()
+    if sql2data.is_table_exist('lot_trades_list') is False:
+        sql2data.create_lot_trades_list()
     # проверяем есть ли в базе данных таблица candles если нет, то создаем
     if sql2data.is_table_exist('candles') is False:
         sql2data.create_candles('candles')
@@ -331,17 +333,17 @@ def calculate_ave_trades(figi, ticker):
         lot_sells = 0
         lot_buys = 0
 
-    if sells > ave_sell * Decimal(2) and sum_sell > sum_buy:
-        data2sql.events_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, 0, 0, 0, 0, 0, now())])
+    if sells > ave_sell * Decimal(1.85) and sum_sell > sum_buy:
+        data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, now())])
         lot_sells = 1
     elif lot_sells == 1 and sells < ave_sell:
-        data2sql.events_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, 0, 0, 0, 0, 0, now())])
+        data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, now())])
         lot_sells = 0
-    if buys > ave_buy * Decimal(2) and sum_sell < sum_buy:
-        data2sql.events_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, 0, 0, 0, 0, 0, now())])
+    if buys > ave_buy * Decimal(1.85) and sum_sell < sum_buy:
+        data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, now())])
         lot_buys = 1
     elif lot_buys == 1 and buys < ave_buy:
-        data2sql.events_list2sql([(ticker, 'END_LOT_BUYS', figi, 'SELL', price, 0, 0, 0, 0, 0, now())])
+        data2sql.lot_trades_list2sql([(ticker, 'END_LOT_BUYS', figi, 'SELL', price, now())])
         lot_buys = 0
 
     data2sql.ave_trades2sql([(figi, ticker, ave_sell, ave_buy, sum_sell, sum_buy, lot_sells, lot_buys)])

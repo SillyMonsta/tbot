@@ -252,3 +252,15 @@ def events_list2sql(events_list):
     cursor.executemany(query, events_list)
     connection.commit()
     return
+
+
+def lot_trades_list2sql(lot_trades_list):
+    query = """
+    INSERT INTO lot_trades_list (ticker, lot_trades_case, figi, direction, price, lot_trades_time)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT(figi, lot_trades_time, lot_trades_case) DO UPDATE SET
+                price = EXCLUDED.price
+                """
+    cursor.executemany(query, lot_trades_list)
+    connection.commit()
+    return

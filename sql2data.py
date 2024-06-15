@@ -108,6 +108,14 @@ def create_events_list():
     return
 
 
+def create_lot_trades_list():
+    cursor.execute("CREATE TABLE lot_trades_list (ticker VARCHAR(50), lot_trades_case TEXT, "
+                   "figi VARCHAR(50), direction VARCHAR(50), price NUMERIC, lot_trades_time TIMESTAMPTZ)")
+    cursor.execute("""CREATE UNIQUE INDEX lot_trades_figi_idx 
+                    ON public.lot_trades_list USING btree (figi, lot_trades_time, "lot_trades_case")""")
+    return
+
+
 def get_trades(figi):
     query = '''
             SELECT * FROM trades
