@@ -209,6 +209,7 @@ def fast_sell(rub_vol, x_time, events_extraction_case):
 def check_and_trade(figi, ticker, start_price, start_direction, direction, last_price, case, x_time,
                     max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol, req_vol,
                     events_extraction_case, true_analyzed_shares):
+    deal = False
     if check_last_event(figi, direction, case, last_price, x_time):
         min_price_increment = sql2data.get_info_by_figi('shares', 'min_price_increment', figi)[0][0]
         lot = sql2data.get_info_by_figi('shares', 'lot', figi)[0][0]
@@ -235,6 +236,7 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                 else:
                     # реальный ордер
                     order_response = tinkoff_requests.market_order(figi, direction, int(vol / lot))
+                    deal = True
                 order_id = order_response[0]
                 status = order_response[1]
                 if order_id and status:
@@ -265,6 +267,7 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                     else:
                         # реальный ордер
                         order_response = tinkoff_requests.market_order(figi, direction, int(dif_vol / lot))
+                        deal = True
                     order_id = order_response[0]
                     status = order_response[1]
                     if order_id and status:
@@ -282,7 +285,7 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
 
         target_price = make_multiple(last_price + last_price * target_percent, min_price_increment)
 
-        if direction == start_direction and true_analyzed_shares:
+        if direction == start_direction and deal is False and true_analyzed_shares:
             to_update = (profit, last_price, target_price, loss_price,
                          loss_percent, target_percent, position_hours, position_days, ticker)
             data2sql.update_analyzed_shares(to_update)
@@ -333,13 +336,13 @@ def calculate_ave_trades(figi, ticker):
         lot_sells = 0
         lot_buys = 0
 
-    if sells > ave_sell * Decimal(1.85) and sum_sell > sum_buy:
+    if sells > ave_sell * Decimal(1.9) and sum_sell > sum_buy:
         data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, now())])
         lot_sells = 1
     elif lot_sells == 1 and sells < ave_sell:
         data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, now())])
         lot_sells = 0
-    if buys > ave_buy * Decimal(1.85) and sum_sell < sum_buy:
+    if buys > ave_buy * Decimal(1.9) and sum_sell < sum_buy:
         data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, now())])
         lot_buys = 1
     elif lot_buys == 1 and buys < ave_buy:
