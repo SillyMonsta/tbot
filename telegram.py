@@ -51,7 +51,7 @@ def graphs_to_telegram(figi):
                                  'high': hi,
                                  'low': lo},
                                 index=pd.date_range(
-                                    "", periods=60, freq="d"))
+                                    "2021-11-10", periods=60, freq="d"))
 
     plt.figure()
 
