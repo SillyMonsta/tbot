@@ -155,6 +155,23 @@ def ave_trades2sql(ave_trades_list):
     return
 
 
+def update_ave_trades(to_update):
+    query = f"UPDATE ave_trades SET ave_sell = %s, ave_buy = %s, sum_sell = %s, sum_buy = %s" \
+            f"WHERE figi = %s"
+    cursor.execute(query, to_update)
+    connection.commit()
+    return
+
+
+def update_lot_trades(to_update):
+    query = f"UPDATE ave_trades SET lot_sells = %s, lot_buys = %s" \
+            f"WHERE figi = %s"
+    cursor.execute(query, to_update)
+    connection.commit()
+    return
+
+
+
 def order_status2sql(order_id, status):
     query = f"""
         UPDATE orders SET status = {status} WHERE order_id = %s
