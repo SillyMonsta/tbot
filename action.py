@@ -303,10 +303,9 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
     return trade
 
 
-def calculate_ave_trades(figi, ticker):
+def calculate_ave_trades(figi, ticker, x_time):
     trades_for_period = sql2data.get_trades(figi)
     price = trades_for_period[0][2]
-    last_trade_time = trades_for_period[0][4]
     sells = 0
     vol_sells = 0
     buys = 0
@@ -336,17 +335,17 @@ def calculate_ave_trades(figi, ticker):
         lot_sells = 0
         lot_buys = 0
 
-    if sells > ave_sell * Decimal(1.95) and vol_sells > vol_buys and vol_sells > sum_sell * Decimal(1.95):
-        data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, last_trade_time)])
+    if sells > ave_sell * Decimal(1.99) and vol_sells > vol_buys and vol_sells > sum_sell * Decimal(1.99):
+        data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, x_time)])
         lot_sells = 1
     elif lot_sells == 1 and (sells < ave_sell * Decimal(1.5) or vol_sells < sum_sell * Decimal(1.5)):
-        data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, last_trade_time)])
+        data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, x_time)])
         lot_sells = 0
-    if buys > ave_buy * Decimal(1.95) and vol_sells < vol_buys and vol_buys > sum_buy * Decimal(1.95):
-        data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, last_trade_time)])
+    if buys > ave_buy * Decimal(1.99) and vol_sells < vol_buys and vol_buys > sum_buy * Decimal(1.99):
+        data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, x_time)])
         lot_buys = 1
     elif lot_buys == 1 and (buys < ave_buy or vol_buys < sum_buy * Decimal(1.5)):
-        data2sql.lot_trades_list2sql([(ticker, 'END_LOT_BUYS', figi, 'SELL', price, last_trade_time)])
+        data2sql.lot_trades_list2sql([(ticker, 'END_LOT_BUYS', figi, 'SELL', price, x_time)])
         lot_buys = 0
 
     data2sql.ave_trades2sql([(figi, ticker, ave_sell, ave_buy, sum_sell, sum_buy, lot_sells, lot_buys)])
