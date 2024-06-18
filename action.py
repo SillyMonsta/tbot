@@ -172,6 +172,18 @@ def check_orders(ticker):
     return
 
 
+def check_last_order(ticker, new_direction, new_vol):
+    last_order = sql2data.get_last_order(ticker)
+    status = last_order[0][1]
+    direction = last_order[0][3]
+    quantity = last_order[0][6]
+    if direction == new_direction and new_vol == quantity and status != 2 and status != 3 and status != 0:
+        return_data = False
+    else:
+        return_data = True
+    return return_data
+
+
 def fast_sell(rub_vol, x_time, events_extraction_case):
     figi = sql2data.get_figi_to_fast_sell(rub_vol)[0][0]
     analyzed_share = sql2data.analyzed_share_by_figi(figi)
@@ -260,12 +272,14 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
                     and x_time.time() > datetime.time(10, 10):
                 dif_vol = int(req_vol - vol)
                 rub_balance = sql2data.get_rub_balance()[0][0]
-                if rub_balance > last_price * dif_vol:
+                # проверяем баланс рублей и последний ордер (чтобы не закупить лишнего)
+                if rub_balance > last_price * dif_vol and check_last_order(ticker, direction, dif_vol):
                     if events_extraction_case:
                         # тестовый ордер
                         order_response = [str(time.time()), 6]
+                    # если не тест
                     else:
-                        # реальный ордер
+                        # ставим реальный ордер
                         order_response = tinkoff_requests.market_order(figi, direction, int(dif_vol / lot))
                         deal = True
                     order_id = order_response[0]
@@ -338,15 +352,15 @@ def calculate_ave_trades(figi, ticker, x_time):
     new_ave_sell = (ave_sell + sells) / 2
     new_ave_buy = (ave_buy + buys) / 2
 
-    if sells > new_ave_sell * Decimal(1.9) and vol_sells > vol_buys and \
-            vol_sells > sum_sell * Decimal(1.9) and ave_sell > 20:
+    if sells > new_ave_sell * Decimal(1.8) and vol_sells > vol_buys and \
+            vol_sells > sum_sell * Decimal(1.8) and ave_sell > 20:
         data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, x_time)])
         lot_sells = 1
     elif lot_sells == 1 and (sells < new_ave_sell * Decimal(1.6) or vol_sells < sum_sell * Decimal(1.6)):
         data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, x_time)])
         lot_sells = 0
-    if buys > new_ave_buy * Decimal(1.9) and vol_sells < vol_buys and \
-            vol_buys > sum_buy * Decimal(1.9) and ave_buy > 20:
+    if buys > new_ave_buy * Decimal(1.8) and vol_sells < vol_buys and \
+            vol_buys > sum_buy * Decimal(1.8) and ave_buy > 20:
         data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, x_time)])
         lot_buys = 1
     elif lot_buys == 1 and (buys < new_ave_buy * Decimal(1.6) or vol_buys < sum_buy * Decimal(1.6)):

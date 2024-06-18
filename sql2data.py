@@ -165,6 +165,13 @@ def get_orders_id_state(ticker):
     return result
 
 
+def get_last_order(ticker):
+    query = '''SELECT * FROM orders WHERE ticker = %s ORDER BY order_time DESC LIMIT 1'''
+    cursor.execute(query, (ticker,))
+    result = cursor.fetchall()
+    return result
+
+
 def get_rub_balance():
     cursor.execute(
         '''
