@@ -46,45 +46,50 @@ def graphs_to_telegram(figi):
         vo.append(float(row[4]))
         candle_dates.append(float(row[5]))
 
-    data = {
-        'date': candle_dates,
-        'open': op,
-        'high': hi,
-        'low': lo,
-        'close': cl,
-        'volume': vo
-    }
+    stock_prices = pd.DataFrame({'open': op,
+                                 'close': cl,
+                                 'high': hi,
+                                 'low': lo},
+                                index=pd.date_range(
+                                    "", periods=60, freq="d"))
 
-    df = pd.DataFrame(data)
-    df['date'] = pd.to_datetime(df['date'])
+    plt.figure()
 
-    # Создаем график свечей
-    fig, ax = plt.subplots()
-    ax.plot(df['date'], df['high'], linestyle='-', color='black')
-    ax.plot(df['date'], df['low'], linestyle='-', color='black')
-    ax.vlines(df['date'], df['low'], df['high'], color='black')
-    for index, row in df.iterrows():
-        if row['close'] > row['open']:
-            color = 'green'
-        else:
-            color = 'red'
-        ax.add_patch(FancyArrowPatch((row['date'], row['open']), (row['date'], row['close']),
-                                     arrowstyle='->', mutation_scale=15, color=color))
+    # "up" dataframe will store the stock_prices
+    # when the closing stock price is greater
+    # than or equal to the opening stock prices
+    up = stock_prices[stock_prices.close >= stock_prices.open]
 
-    # Наложение стрелок на точки (предположим, что у нас есть данные точек)
-    points = {
-        'date': ['2022-01-01', '2022-01-02', '2022-01-03', '2022-01-04'],
-        'price': [105, 112, 107, 123]
-    }
+    # "down" dataframe will store the stock_prices
+    # when the closing stock price is
+    # lesser than the opening stock prices
+    down = stock_prices[stock_prices.close < stock_prices.open]
 
-    df_points = pd.DataFrame(points)
-    df_points['date'] = pd.to_datetime(df_points['date'])
+    # When the stock prices have decreased, then it
+    # will be represented by blue color candlestick
+    col1 = 'red'
 
-    for index, row in df_points.iterrows():
-        ax.add_patch(FancyArrowPatch((row['date'], row['price']), (row['date'], row['price']),
-                                     arrowstyle='-', mutation_scale=15, color='purple'))
+    # When the stock prices have increased, then it
+    # will be represented by green color candlestick
+    col2 = 'green'
 
-    ax.set_title('OHLCV Candlestick Chart')
+    # Setting width of candlestick elements
+    width = .5
+    width2 = .05
+
+    # Plotting up prices of the stock
+    plt.bar(up.index, up.close - up.open, width, bottom=up.open, color=col1)
+    plt.bar(up.index, up.high - up.close, width2, bottom=up.close, color=col1)
+    plt.bar(up.index, up.low - up.open, width2, bottom=up.open, color=col1)
+
+    # Plotting down prices of the stock
+    plt.bar(down.index, down.close - down.open, width, bottom=down.open, color=col2)
+    plt.bar(down.index, down.high - down.open, width2, bottom=down.open, color=col2)
+    plt.bar(down.index, down.low - down.close, width2, bottom=down.close, color=col2)
+
+    # rotating the x-axis tick labels at 30degree
+    # towards right
+    plt.xticks(rotation=30, ha='right')
 
     # Сохранение графика в буфере
     buffer = BytesIO()
@@ -218,68 +223,68 @@ def handle_message(message):
                  '\n\n3.Получить последние строки из log.txt:\nlog [num_lines]' \
                  '\n\n4.Получить из events_list последний event по акции:\nlast-event [ticker]'
         feedback = notice
-        #try:
-        if user_message.split(' ')[0] == 'update':
-            ticker = user_message.split(' ')[1]
-            buy = user_message.split(' ')[2]
-            fast_buy = user_message.split(' ')[3]
-            sell = user_message.split(' ')[4]
-            vol = user_message.split(' ')[5]
-            req_vol = user_message.split(' ')[6]
-            tickers = sql2data.analyzed_share_tickers_list()
-            if (ticker,) not in tickers:
-                feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
-            elif not vol.isdigit() or not req_vol.isdigit():
-                feedback = 'Ошибка ввода. vol и req_vol целые числа (INT)'
-            else:
-                data2sql.update_analyzed_shares_from_telegram(buy, fast_buy, sell, vol, req_vol, ticker)
-                feedback = analyzed_share_string(ticker)
+        try:
+            if user_message.split(' ')[0] == 'update':
+                ticker = user_message.split(' ')[1]
+                buy = user_message.split(' ')[2]
+                fast_buy = user_message.split(' ')[3]
+                sell = user_message.split(' ')[4]
+                vol = user_message.split(' ')[5]
+                req_vol = user_message.split(' ')[6]
+                tickers = sql2data.analyzed_share_tickers_list()
+                if (ticker,) not in tickers:
+                    feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
+                elif not vol.isdigit() or not req_vol.isdigit():
+                    feedback = 'Ошибка ввода. vol и req_vol целые числа (INT)'
+                else:
+                    data2sql.update_analyzed_shares_from_telegram(buy, fast_buy, sell, vol, req_vol, ticker)
+                    feedback = analyzed_share_string(ticker)
 
-        elif user_message.split(' ')[0] == 'get':
-            ticker = user_message.split(' ')[1]
-            tickers = sql2data.analyzed_share_tickers_list()
-            if (ticker,) not in tickers:
-                feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
-            else:
-                feedback = analyzed_share_string(ticker)
+            elif user_message.split(' ')[0] == 'get':
+                ticker = user_message.split(' ')[1]
+                tickers = sql2data.analyzed_share_tickers_list()
+                if (ticker,) not in tickers:
+                    feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
+                else:
+                    feedback = analyzed_share_string(ticker)
 
-        elif user_message.split(' ')[0] == 'events':
-            row_count = user_message.split(' ')[1]
-            if not row_count.isdigit():
-                feedback = 'Ошибка ввода. row_count целое число (INT)'
-            else:
-                feedback = last_events_string(int(row_count))
+            elif user_message.split(' ')[0] == 'events':
+                row_count = user_message.split(' ')[1]
+                if not row_count.isdigit():
+                    feedback = 'Ошибка ввода. row_count целое число (INT)'
+                else:
+                    feedback = last_events_string(int(row_count))
 
-        elif user_message.split(' ')[0] == 'orders':
-            row_count = user_message.split(' ')[1]
-            if not row_count.isdigit():
-                feedback = 'Ошибка ввода. row_count целое число (INT)'
-            else:
-                feedback = last_orders_string(int(row_count))
+            elif user_message.split(' ')[0] == 'orders':
+                row_count = user_message.split(' ')[1]
+                if not row_count.isdigit():
+                    feedback = 'Ошибка ввода. row_count целое число (INT)'
+                else:
+                    feedback = last_orders_string(int(row_count))
 
-        elif user_message.split(' ')[0] == 'last-event':
-            ticker = user_message.split(' ')[1]
-            feedback = last_event_ticker_string(ticker)
+            elif user_message.split(' ')[0] == 'last-event':
+                ticker = user_message.split(' ')[1]
+                feedback = last_event_ticker_string(ticker)
 
-        elif user_message.split(' ')[0] == 'log':
-            num_lines = user_message.split(' ')[1]
-            if not num_lines.isdigit():
-                feedback = 'Ошибка ввода. num_lines целое число (INT)'
-            else:
-                feedback = readlog('log.txt', num_lines)
+            elif user_message.split(' ')[0] == 'log':
+                num_lines = user_message.split(' ')[1]
+                if not num_lines.isdigit():
+                    feedback = 'Ошибка ввода. num_lines целое число (INT)'
+                else:
+                    feedback = readlog('log.txt', num_lines)
 
-        elif user_message.split(' ')[0] == 'graph':
-            ticker = user_message.split(' ')[1]
-            tickers = sql2data.analyzed_share_tickers_list()
-            figi = sql2data.get_info_by_ticker('shares', 'figi', ticker)[0][0]
-            if (ticker,) not in tickers:
-                feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
-            else:
-                graphs_to_telegram(figi)
-                feedback = analyzed_share_string(ticker)
+            elif user_message.split(' ')[0] == 'graph':
+                ticker = user_message.split(' ')[1]
+                tickers = sql2data.analyzed_share_tickers_list()
+                figi = sql2data.get_info_by_ticker('shares', 'figi', ticker)[0][0]
+                if (ticker,) not in tickers:
+                    feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
+                else:
+                    graphs_to_telegram(figi)
+                    feedback = analyzed_share_string(ticker)
 
-        #except Exception:
-        #    feedback = notice
+        except Exception:
+            feedback = notice
 
         bot.send_message(message.chat.id, feedback)
 
