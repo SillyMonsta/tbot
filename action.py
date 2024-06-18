@@ -367,7 +367,7 @@ def check_lot_trades(figi):
         lot_sells = ave_trade[0][6]
         lot_buys = ave_trade[0][7]
 
-        if sells > ave_sell * Decimal(1.5) and vol_sells > vol_buys and vol_sells > sum_sell * Decimal(1.5):
+        if sells > ave_sell * Decimal(1.95) and vol_sells > vol_buys and vol_sells > sum_sell * Decimal(1.95):
             ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
             data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, last_trade_time)])
             lot_sells = 1
@@ -375,7 +375,7 @@ def check_lot_trades(figi):
             ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
             data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, last_trade_time)])
             lot_sells = 0
-        if buys > ave_buy * Decimal(1.5) and vol_sells < vol_buys and vol_buys > sum_buy * Decimal(1.5):
+        if buys > ave_buy * Decimal(1.95) and vol_sells < vol_buys and vol_buys > sum_buy * Decimal(1.95):
             ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
             data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, last_trade_time)])
             lot_buys = 1
