@@ -305,8 +305,8 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
 
 def calculate_ave_trades(figi, ticker):
     trades_for_period = sql2data.get_trades(figi)
-    # price = trades_for_period[0][2]
-    # last_trade_time = trades_for_period[0][4]
+    price = trades_for_period[0][2]
+    last_trade_time = trades_for_period[0][4]
     sells = 0
     vol_sells = 0
     buys = 0
@@ -326,9 +326,8 @@ def calculate_ave_trades(figi, ticker):
         ave_buy = (ave_trade[0][3] + buys) / 2
         sum_sell = (ave_trade[0][4] + vol_sells) / 2
         sum_buy = (ave_trade[0][5] + vol_buys) / 2
-        # lot_sells = ave_trade[0][6]
-        # lot_buys = ave_trade[0][7]
-        data2sql.update_ave_trades((ave_sell, ave_buy, sum_sell, sum_buy, figi))
+        lot_sells = ave_trade[0][6]
+        lot_buys = ave_trade[0][7]
     else:
         ave_sell = sells
         ave_buy = buys
@@ -336,55 +335,22 @@ def calculate_ave_trades(figi, ticker):
         sum_buy = vol_buys
         lot_sells = 0
         lot_buys = 0
-        data2sql.ave_trades2sql([(figi, ticker, ave_sell, ave_buy, sum_sell, sum_buy, lot_sells, lot_buys)])
-    return
 
+    if sells > ave_sell * Decimal(1.95) and vol_sells > vol_buys and vol_sells > sum_sell * Decimal(1.95):
+        data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, last_trade_time)])
+        lot_sells = 1
+    elif lot_sells == 1 and (sells < ave_sell * Decimal(1.5) or vol_sells < sum_sell * Decimal(1.5)):
+        data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, last_trade_time)])
+        lot_sells = 0
+    if buys > ave_buy * Decimal(1.95) and vol_sells < vol_buys and vol_buys > sum_buy * Decimal(1.95):
+        data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, last_trade_time)])
+        lot_buys = 1
+    elif lot_buys == 1 and (buys < ave_buy or vol_buys < sum_buy * Decimal(1.5)):
+        data2sql.lot_trades_list2sql([(ticker, 'END_LOT_BUYS', figi, 'SELL', price, last_trade_time)])
+        lot_buys = 0
 
-def check_lot_trades(figi):
-    trades_for_period = sql2data.get_trades(figi)
-    price = trades_for_period[0][2]
-    last_trade_time = trades_for_period[0][4]
-    sells = 0
-    vol_sells = 0
-    buys = 0
-    vol_buys = 0
-    for trade in trades_for_period:
-        direction = trade[1]
-        quantity = trade[3]
-        if direction == 'SELL':
-            sells += 1
-            vol_sells = vol_sells + quantity
-        elif direction == 'BUY':
-            buys += 1
-            vol_buys = vol_buys + quantity
+    data2sql.ave_trades2sql([(figi, ticker, ave_sell, ave_buy, sum_sell, sum_buy, lot_sells, lot_buys)])
 
-    ave_trade = sql2data.get_ave_trades(figi)
-    if ave_trade:
-        ave_sell = ave_trade[0][2]
-        ave_buy = ave_trade[0][3]
-        sum_sell = ave_trade[0][4]
-        sum_buy = ave_trade[0][5]
-        lot_sells = ave_trade[0][6]
-        lot_buys = ave_trade[0][7]
-
-        if sells > ave_sell * Decimal(1.95) and vol_sells > vol_buys and vol_sells > sum_sell * Decimal(1.95):
-            ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
-            data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, last_trade_time)])
-            lot_sells = 1
-        elif lot_sells == 1 and (sells < ave_sell * Decimal(1.5) or vol_sells < sum_sell * Decimal(1.5)):
-            ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
-            data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, last_trade_time)])
-            lot_sells = 0
-        if buys > ave_buy * Decimal(1.95) and vol_sells < vol_buys and vol_buys > sum_buy * Decimal(1.95):
-            ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
-            data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, last_trade_time)])
-            lot_buys = 1
-        elif lot_buys == 1 and (buys < ave_buy or vol_buys < sum_buy * Decimal(1.5)):
-            ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
-            data2sql.lot_trades_list2sql([(ticker, 'END_LOT_BUYS', figi, 'SELL', price, last_trade_time)])
-            lot_buys = 0
-
-        data2sql.update_lot_trades((lot_sells, lot_buys, figi))
     return
 
 
