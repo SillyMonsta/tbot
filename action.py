@@ -488,7 +488,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             position_days = get_price_position(figi, table_name)
 
             # вычисляем среднее кол-во сделок за промежуток, проверяем текущее кол-во сделок за промежуток
-            calculate_ave_trades(figi, ticker)
+            calculate_ave_trades(figi, ticker, x_time)
 
             # если start_direction BUY то определяем target_percent, loss_percent и loss_price
             if start_direction == 'BUY':
