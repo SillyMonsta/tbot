@@ -9,7 +9,6 @@ import time
 from tinkoff.invest.utils import now
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.patches import FancyArrowPatch
 from io import BytesIO
 
 bot_token = get_token_file.get_token('telegram_bot_token.txt').split()[0]
@@ -44,62 +43,65 @@ def graphs_to_telegram(figi):
         lo.append(float(row[2]))
         cl.append(float(row[3]))
         vo.append(float(row[4]))
-        candle_dates.append(float(row[5]))
+        candle_dates.append(str(row[5]))
+    else:
+        stock_prices = pd.DataFrame({'open': op,
+                                     'close': cl,
+                                     'high': hi,
+                                     'low': lo},
+                                    index=pd.date_range(
+                                        "2021-11-10", periods=60, freq="d"))
+        plt.figure()
 
-    stock_prices = pd.DataFrame({'open': op,
-                                 'close': cl,
-                                 'high': hi,
-                                 'low': lo},
-                                index=pd.date_range(
-                                    "2021-11-10", periods=60, freq="d"))
+        # "up" dataframe will store the stock_prices
+        # when the closing stock price is greater
+        # than or equal to the opening stock prices
+        up = stock_prices[stock_prices.close >= stock_prices.open]
 
-    plt.figure()
+        # "down" dataframe will store the stock_prices
+        # when the closing stock price is
+        # lesser than the opening stock prices
+        down = stock_prices[stock_prices.close < stock_prices.open]
 
-    # "up" dataframe will store the stock_prices
-    # when the closing stock price is greater
-    # than or equal to the opening stock prices
-    up = stock_prices[stock_prices.close >= stock_prices.open]
 
-    # "down" dataframe will store the stock_prices
-    # when the closing stock price is
-    # lesser than the opening stock prices
-    down = stock_prices[stock_prices.close < stock_prices.open]
 
-    # When the stock prices have decreased, then it
-    # will be represented by blue color candlestick
-    col1 = 'red'
+        # When the stock prices have decreased, then it
+        # will be represented by blue color candlestick
+        col1 = 'red'
 
-    # When the stock prices have increased, then it
-    # will be represented by green color candlestick
-    col2 = 'green'
+        # When the stock prices have increased, then it
+        # will be represented by green color candlestick
+        col2 = 'green'
 
-    # Setting width of candlestick elements
-    width = .5
-    width2 = .05
+        # Setting width of candlestick elements
+        width = .5
+        width2 = .05
 
-    # Plotting up prices of the stock
-    plt.bar(up.index, up.close - up.open, width, bottom=up.open, color=col1)
-    plt.bar(up.index, up.high - up.close, width2, bottom=up.close, color=col1)
-    plt.bar(up.index, up.low - up.open, width2, bottom=up.open, color=col1)
+        # Plotting up prices of the stock
+        plt.bar(up.index, up.close - up.open, width, bottom=up.open, color=col1)
+        plt.bar(up.index, up.high - up.close, width2, bottom=up.close, color=col1)
+        plt.bar(up.index, up.low - up.open, width2, bottom=up.open, color=col1)
 
-    # Plotting down prices of the stock
-    plt.bar(down.index, down.close - down.open, width, bottom=down.open, color=col2)
-    plt.bar(down.index, down.high - down.open, width2, bottom=down.open, color=col2)
-    plt.bar(down.index, down.low - down.close, width2, bottom=down.close, color=col2)
+        # Plotting down prices of the stock
+        plt.bar(down.index, down.close - down.open, width, bottom=down.open, color=col2)
+        plt.bar(down.index, down.high - down.open, width2, bottom=down.open, color=col2)
+        plt.bar(down.index, down.low - down.close, width2, bottom=down.close, color=col2)
 
-    # rotating the x-axis tick labels at 30degree
-    # towards right
-    plt.xticks(rotation=30, ha='right')
 
-    # Сохранение графика в буфере
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
 
-    user_id = 1138331624
-    bot.send_photo(chat_id=user_id, photo=buffer)
+        # rotating the x-axis tick labels at 30degree
+        # towards right
+        plt.xticks(rotation=30, ha='right')
 
-    plt.close()
+        # Сохранение графика в буфере
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+
+        user_id = 1138331624
+        bot.send_photo(chat_id=user_id, photo=buffer)
+
+        plt.close()
     return
 
 
@@ -240,7 +242,7 @@ def handle_message(message):
                     data2sql.update_analyzed_shares_from_telegram(buy, fast_buy, sell, vol, req_vol, ticker)
                     feedback = analyzed_share_string(ticker)
 
-            elif user_message.split(' ')[0] == 'get':
+            if user_message.split(' ')[0] == 'get':
                 ticker = user_message.split(' ')[1]
                 tickers = sql2data.analyzed_share_tickers_list()
                 if (ticker,) not in tickers:
@@ -248,40 +250,41 @@ def handle_message(message):
                 else:
                     feedback = analyzed_share_string(ticker)
 
-            elif user_message.split(' ')[0] == 'events':
+            if user_message.split(' ')[0] == 'events':
                 row_count = user_message.split(' ')[1]
                 if not row_count.isdigit():
                     feedback = 'Ошибка ввода. row_count целое число (INT)'
                 else:
                     feedback = last_events_string(int(row_count))
 
-            elif user_message.split(' ')[0] == 'orders':
+            if user_message.split(' ')[0] == 'orders':
                 row_count = user_message.split(' ')[1]
                 if not row_count.isdigit():
                     feedback = 'Ошибка ввода. row_count целое число (INT)'
                 else:
                     feedback = last_orders_string(int(row_count))
 
-            elif user_message.split(' ')[0] == 'last-event':
+            if user_message.split(' ')[0] == 'last-event':
                 ticker = user_message.split(' ')[1]
                 feedback = last_event_ticker_string(ticker)
 
-            elif user_message.split(' ')[0] == 'log':
+            if user_message.split(' ')[0] == 'log':
                 num_lines = user_message.split(' ')[1]
                 if not num_lines.isdigit():
                     feedback = 'Ошибка ввода. num_lines целое число (INT)'
                 else:
                     feedback = readlog('log.txt', num_lines)
 
-            elif user_message.split(' ')[0] == 'graph':
+            if user_message.split(' ')[0] == 'graph':
                 ticker = user_message.split(' ')[1]
                 tickers = sql2data.analyzed_share_tickers_list()
-                figi = sql2data.get_info_by_ticker('shares', 'figi', ticker)[0][0]
                 if (ticker,) not in tickers:
                     feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
                 else:
+                    figi = sql2data.get_info_by_ticker('shares', 'figi', ticker)[0][0]
                     graphs_to_telegram(figi)
-                    feedback = analyzed_share_string(ticker)
+
+                    feedback = ticker
 
         except Exception:
             feedback = notice

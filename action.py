@@ -352,18 +352,18 @@ def calculate_ave_trades(figi, ticker, x_time):
     new_ave_sell = (ave_sell + sells) / 2
     new_ave_buy = (ave_buy + buys) / 2
 
-    if sells > new_ave_sell * Decimal(1.8) and vol_sells > vol_buys and \
-            vol_sells > sum_sell * Decimal(1.8) and ave_sell > 20:
+    if sells > new_ave_sell * Decimal(1.6) and vol_sells > vol_buys and \
+            vol_sells > sum_sell * Decimal(1.6) and ave_sell > 20:
         data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, x_time)])
         lot_sells = 1
-    elif lot_sells == 1 and (sells < new_ave_sell * Decimal(1.6) or vol_sells < sum_sell * Decimal(1.6)):
+    elif lot_sells == 1 and (sells < new_ave_sell * Decimal(1.4) or vol_sells < sum_sell * Decimal(1.4)):
         data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, x_time)])
         lot_sells = 0
-    if buys > new_ave_buy * Decimal(1.8) and vol_sells < vol_buys and \
-            vol_buys > sum_buy * Decimal(1.8) and ave_buy > 20:
+    if buys > new_ave_buy * Decimal(1.6) and vol_sells < vol_buys and \
+            vol_buys > sum_buy * Decimal(1.6) and ave_buy > 20:
         data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, x_time)])
         lot_buys = 1
-    elif lot_buys == 1 and (buys < new_ave_buy * Decimal(1.6) or vol_buys < sum_buy * Decimal(1.6)):
+    elif lot_buys == 1 and (buys < new_ave_buy * Decimal(1.4) or vol_buys < sum_buy * Decimal(1.4)):
         data2sql.lot_trades_list2sql([(ticker, 'END_LOT_BUYS', figi, 'SELL', price, x_time)])
         lot_buys = 0
 
