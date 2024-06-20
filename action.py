@@ -338,8 +338,8 @@ def calculate_ave_trades(figi, ticker, x_time):
     if ave_trade:
         ave_sell = ave_trade[0][2]
         ave_buy = ave_trade[0][3]
-        sum_sell = (ave_trade[0][4] + vol_sells) / 2
-        sum_buy = (ave_trade[0][5] + vol_buys) / 2
+        sum_sell = ave_trade[0][4]
+        sum_buy = ave_trade[0][5]
         lot_sells = ave_trade[0][6]
         lot_buys = ave_trade[0][7]
     else:
@@ -351,23 +351,25 @@ def calculate_ave_trades(figi, ticker, x_time):
         lot_buys = 0
     new_ave_sell = (ave_sell + sells) / 2
     new_ave_buy = (ave_buy + buys) / 2
+    new_sum_sell = (sum_sell + vol_sells) / 2
+    new_sum_buy = (sum_buy + vol_buys) / 2
 
-    if sells > new_ave_sell * Decimal(1.6) and vol_sells > vol_buys and \
-            vol_sells > sum_sell * Decimal(1.6) and ave_sell > 20:
+    if sells > ave_sell * Decimal(3) and vol_sells > vol_buys and \
+            vol_sells > sum_sell * Decimal(3) and ave_sell > 20:
         data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, x_time)])
         lot_sells = 1
-    elif lot_sells == 1 and (sells < new_ave_sell * Decimal(1.4) or vol_sells < sum_sell * Decimal(1.4)):
+    elif lot_sells == 1 and (sells < ave_sell * Decimal(2) or vol_sells < sum_sell * Decimal(2)):
         data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, x_time)])
         lot_sells = 0
-    if buys > new_ave_buy * Decimal(1.6) and vol_sells < vol_buys and \
-            vol_buys > sum_buy * Decimal(1.6) and ave_buy > 20:
+    if buys > ave_buy * Decimal(3) and vol_sells < vol_buys and \
+            vol_buys > sum_buy * Decimal(3) and ave_buy > 20:
         data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, x_time)])
         lot_buys = 1
-    elif lot_buys == 1 and (buys < new_ave_buy * Decimal(1.4) or vol_buys < sum_buy * Decimal(1.4)):
+    elif lot_buys == 1 and (buys < ave_buy * Decimal(2) or vol_buys < sum_buy * Decimal(2)):
         data2sql.lot_trades_list2sql([(ticker, 'END_LOT_BUYS', figi, 'SELL', price, x_time)])
         lot_buys = 0
 
-    data2sql.ave_trades2sql([(figi, ticker, new_ave_sell, new_ave_buy, sum_sell, sum_buy, lot_sells, lot_buys)])
+    data2sql.ave_trades2sql([(figi, ticker, new_ave_sell, new_ave_buy, new_sum_sell, new_sum_buy, lot_sells, lot_buys)])
 
     return
 
