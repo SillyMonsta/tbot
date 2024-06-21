@@ -1,4 +1,5 @@
 import get_token_file
+import tinkoff_requests
 import telebot
 import os
 import data2sql
@@ -28,80 +29,102 @@ def readlog(name, num_lines):
     return message
 
 
-def graphs_to_telegram(figi):
+def graphs_to_telegram(figi, limit):
     # извлекаем свечки по указанному фиги
-    candles = sql2data.candles_to_finta(figi, now(), 'candles')
+    # candles = sql2data.candles_to_finta(figi, now(), 'candles')
+    candles = sql2data.candles_to_graph(figi, now(), limit)
+
     op = []
     hi = []
     lo = []
     cl = []
     vo = []
-    candle_dates = []
+    list_dates = []
+    indexes = []
+    i = 0
     for row in candles:
         op.append(float(row[0]))
         hi.append(float(row[1]))
         lo.append(float(row[2]))
         cl.append(float(row[3]))
         vo.append(float(row[4]))
-        candle_dates.append(str(row[5]))
-    else:
-        stock_prices = pd.DataFrame({'open': op,
-                                     'close': cl,
-                                     'high': hi,
-                                     'low': lo},
-                                    index=pd.date_range(
-                                        "2021-11-10", periods=60, freq="d"))
-        plt.figure()
+        i += 1
+        list_dates.append(str(row[5])[:19])
+        indexes.append(i)
 
-        # "up" dataframe will store the stock_prices
-        # when the closing stock price is greater
-        # than or equal to the opening stock prices
-        up = stock_prices[stock_prices.close >= stock_prices.open]
+    # формируем из двух списков словарь, в качестве ключей округлённые до часов даты, значения - индексы
+    candle_dates = dict(zip(list_dates, indexes))
 
-        # "down" dataframe will store the stock_prices
-        # when the closing stock price is
-        # lesser than the opening stock prices
-        down = stock_prices[stock_prices.close < stock_prices.open]
+    date_from = candles[0][5]
+    list_lot_trades_from_date = sql2data.lot_trades_from_date(figi, date_from)
+    list_events_from_date = sql2data.events_from_date(figi, date_from)
 
+    stock_prices = pd.DataFrame({'open': op,
+                                 'close': cl,
+                                 'high': hi,
+                                 'low': lo}, index=pd.Series(indexes))
 
+    plt.figure()
 
-        # When the stock prices have decreased, then it
-        # will be represented by blue color candlestick
-        col1 = 'red'
+    up = stock_prices[stock_prices.close >= stock_prices.open]
+    down = stock_prices[stock_prices.close < stock_prices.open]
+    col1 = 'red'
+    col2 = 'green'
+    width = .5
+    width2 = .1
 
-        # When the stock prices have increased, then it
-        # will be represented by green color candlestick
-        col2 = 'green'
+    # Plotting up prices of the stock
+    plt.bar(up.index, up.close - up.open, width, bottom=up.open, color=col1)
+    plt.bar(up.index, up.high - up.close, width2, bottom=up.close, color=col1)
+    plt.bar(up.index, up.low - up.open, width2, bottom=up.open, color=col1)
 
-        # Setting width of candlestick elements
-        width = .5
-        width2 = .05
+    # Plotting down prices of the stock
+    plt.bar(down.index, down.close - down.open, width, bottom=down.open, color=col2)
+    plt.bar(down.index, down.high - down.open, width2, bottom=down.open, color=col2)
+    plt.bar(down.index, down.low - down.close, width2, bottom=down.close, color=col2)
 
-        # Plotting up prices of the stock
-        plt.bar(up.index, up.close - up.open, width, bottom=up.open, color=col1)
-        plt.bar(up.index, up.high - up.close, width2, bottom=up.close, color=col1)
-        plt.bar(up.index, up.low - up.open, width2, bottom=up.open, color=col1)
+    for trade in list_lot_trades_from_date:
+        case = trade[1]
+        direction = trade[3]
+        price = trade[4]
+        date = str(tinkoff_requests.adapt_date4interval(trade[5], 4))[:19]
+        try:
+            plt.scatter(candle_dates[date], price, color='red' if direction == 'SELL' else 'green', marker='o')
+            plt.text(candle_dates[date], price, case, verticalalignment='bottom', horizontalalignment='right',
+                     fontsize=8)
+        except KeyError:
+            pass
 
-        # Plotting down prices of the stock
-        plt.bar(down.index, down.close - down.open, width, bottom=down.open, color=col2)
-        plt.bar(down.index, down.high - down.open, width2, bottom=down.open, color=col2)
-        plt.bar(down.index, down.low - down.close, width2, bottom=down.close, color=col2)
+    for event in list_events_from_date:
+        case = event[1]
+        direction = event[3]
+        price = event[4]
+        date = str(tinkoff_requests.adapt_date4interval(event[10], 4))[:19]
+        try:
+            plt.scatter(candle_dates[date], price, color='red' if direction == 'SELL' else 'green', marker='o')
+            plt.text(candle_dates[date], price, case, verticalalignment='bottom', horizontalalignment='right',
+                     fontsize=8)
+        except KeyError:
+            pass
+    # rotating the x-axis tick labels at 30degree
+    # towards right
+    # period = len(indexes) / 6
+    # n = 0
+    # for n in range(0,5):
 
+    plt.xticks(rotation=30, ha='right')
+    # plt.xticks (ticks=, labels=list_dates)
+    # plt.xticks(pd.Series(list_dates), rotation=30, ha='right')
 
+    # Сохранение графика в буфере
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
 
-        # rotating the x-axis tick labels at 30degree
-        # towards right
-        plt.xticks(rotation=30, ha='right')
+    user_id = 1138331624
+    bot.send_photo(chat_id=user_id, photo=buffer)
 
-        # Сохранение графика в буфере
-        buffer = BytesIO()
-        plt.savefig(buffer, format='png')
-        buffer.seek(0)
-
-        user_id = 1138331624
-        bot.send_photo(chat_id=user_id, photo=buffer)
-
-        plt.close()
+    plt.close()
     return
 
 
@@ -205,7 +228,7 @@ def start_telegram_connection():
         # write2file.write(str(datetime.datetime.now())[:19] +
         #                 ' telegram_connection --> Exception: ' + str(e),
         #                 'log.txt')
-        time.sleep(120)
+        time.sleep(20)
         start_telegram_connection()
 
 
@@ -221,9 +244,10 @@ def handle_message(message):
                  '\n\n1.Переписать значение в analyzed_shares:\nupdate [ticker] [buy] [fast_buy] [sell] [vol] [req_vol]' \
                  '\n\n2.Получить данные по акции из analyzed_shares:\nget [ticker]' \
                  '\n\n3.Получить последние строки из events_list:\nevents [row_count]' \
-                 '\n\n3.Получить последние строки из orders:\norders [row_count]' \
-                 '\n\n3.Получить последние строки из log.txt:\nlog [num_lines]' \
-                 '\n\n4.Получить из events_list последний event по акции:\nlast-event [ticker]'
+                 '\n\n4.Получить последние строки из orders:\norders [row_count]' \
+                 '\n\n5.Получить последние строки из log.txt:\nlog [num_lines]' \
+                 '\n\n6.Получить из events_list последний event по акции:\nlast-event [ticker]' \
+                 '\n\n7.Получить график свечей по акции, и за количество часов:\ngraph [ticker] [limit]'
         feedback = notice
         try:
             if user_message.split(' ')[0] == 'update':
@@ -278,13 +302,13 @@ def handle_message(message):
             if user_message.split(' ')[0] == 'graph':
                 ticker = user_message.split(' ')[1]
                 tickers = sql2data.analyzed_share_tickers_list()
-                if (ticker,) not in tickers:
-                    feedback = 'Ошибка ввода. Нет такой акции в таблице analyzed_share'
+                limit = user_message.split(' ')[2]
+                if (ticker,) not in tickers or not limit.isdigit():
+                    feedback = "неверная акция или лимит"
                 else:
                     figi = sql2data.get_info_by_ticker('shares', 'figi', ticker)[0][0]
-                    graphs_to_telegram(figi)
-
-                    feedback = ticker
+                    graphs_to_telegram(figi, int(limit))
+                    feedback = analyzed_share_string(ticker)
 
         except Exception:
             feedback = notice

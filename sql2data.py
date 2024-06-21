@@ -419,8 +419,54 @@ def candles_to_finta(figi, x_time, table_name):
     return candles
 
 
+def candles_to_graph(figi, x_time, limit):
+    # Вытаскиваем часовой интервал
+    query = f'''
+            SELECT *
+            FROM (
+                SELECT open, high, low, close, volume, candle_time FROM candles 
+                WHERE figi = %s 
+                AND interval = 4 
+                AND EXTRACT(DOW FROM candle_time) NOT IN (0, 6)
+                AND EXTRACT(HOUR FROM candle_time) IN (7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
+                AND candle_time <= %s
+                ORDER BY candle_time DESC LIMIT %s
+            ) subquery
+            ORDER BY candle_time ASC
+            '''
+    cursor.execute(query, (figi, x_time, limit))
+    candles = cursor.fetchall()
+    return candles
+
+
 def distinct_figi_events():
     query = '''SELECT DISTINCT figi FROM events_list'''
     cursor.execute(query)
     results = cursor.fetchall()
     return results
+
+
+def events_from_date(figi, date_from):
+    # Вытаскиваем часовой интервал
+    query = f'''
+            SELECT * FROM events_list
+            WHERE figi = %s 
+            AND event_time >= %s
+            ORDER BY event_time ASC
+            '''
+    cursor.execute(query, (figi, date_from))
+    candles = cursor.fetchall()
+    return candles
+
+
+def lot_trades_from_date(figi, date_from):
+    # Вытаскиваем часовой интервал
+    query = f'''
+            SELECT * FROM lot_trades_list
+            WHERE figi = %s 
+            AND lot_trades_time >= %s
+            ORDER BY lot_trades_time ASC
+            '''
+    cursor.execute(query, (figi, date_from))
+    candles = cursor.fetchall()
+    return candles
