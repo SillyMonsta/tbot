@@ -47,12 +47,14 @@ def graphs_to_telegram(figi, limit):
         lo.append(float(row[2]))
         cl.append(float(row[3]))
         vo.append(float(row[4]))
-        i += 1
         list_dates.append(str(row[5])[:19])
         indexes.append(i)
+        i += 1
 
-    # формируем из двух списков словарь, в качестве ключей округлённые до часов даты, значения - индексы
-    candle_dates = dict(zip(list_dates, indexes))
+    # формируем из двух списков словари: в одном качестве ключей округлённые до часов даты, в качестве значений - индексы,
+    # во втором наоборот ключи - индексы, значения - даты
+    dates_indexes = dict(zip(list_dates, indexes))
+    indexes_dates = dict(zip(indexes, list_dates))
 
     date_from = candles[0][5]
     list_lot_trades_from_date = sql2data.lot_trades_from_date(figi, date_from)
@@ -86,11 +88,11 @@ def graphs_to_telegram(figi, limit):
         case = trade[1]
         direction = trade[3]
         price = trade[4]
-        date = str(tinkoff_requests.adapt_date4interval(trade[5], 4))[:19]
+        date = str(trade[5].replace(minute=0, second=0, microsecond=0))[:19]
         try:
-            plt.scatter(candle_dates[date], price, color='red' if direction == 'SELL' else 'green', marker='o')
-            plt.text(candle_dates[date], price, case, verticalalignment='bottom', horizontalalignment='right',
-                     fontsize=8)
+            plt.scatter(dates_indexes[date], price, color='red' if direction == 'SELL' else 'green', marker='o')
+            plt.text(dates_indexes[date], price, case, verticalalignment='bottom', horizontalalignment='right',
+                     fontsize=5)
         except KeyError:
             pass
 
@@ -100,20 +102,23 @@ def graphs_to_telegram(figi, limit):
         price = event[4]
         date = str(event[10].replace(minute=0, second=0, microsecond=0))[:19]
         try:
-            plt.scatter(candle_dates[date], price, color='red' if direction == 'SELL' else 'green', marker='o')
-            plt.text(candle_dates[date], price, case, verticalalignment='bottom', horizontalalignment='right',
-                     fontsize=8)
+            plt.scatter(dates_indexes[date], price, color='red' if direction == 'SELL' else 'green', marker='o')
+            plt.text(dates_indexes[date], price, case, verticalalignment='bottom', horizontalalignment='right',
+                     fontsize=6)
         except KeyError:
             pass
-    # rotating the x-axis tick labels at 30degree
-    # towards right
-    # period = len(indexes) / 6
-    # n = 0
-    # for n in range(0,5):
 
-    plt.xticks(rotation=30, ha='right')
-    # plt.xticks (ticks=, labels=list_dates)
-    # plt.xticks(pd.Series(list_dates), rotation=30, ha='right')
+    period = len(indexes) / 12
+    n = 0
+    short_list_indexes = []
+    short_list_dates = []
+    for xn in range(0, 12):
+        short_list_indexes.append(n)
+        short_list_dates.append(str(indexes_dates[n])[5:13])
+        n += int(period)
+    short_list_indexes.append(indexes[-1])
+    short_list_dates.append(str(list_dates[-1])[5:13])
+    plt.xticks(rotation=30, ha='right', ticks=short_list_indexes, labels=short_list_dates)
 
     # Сохранение графика в буфере
     buffer = BytesIO()
