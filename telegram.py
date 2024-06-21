@@ -108,11 +108,11 @@ def graphs_to_telegram(figi, limit):
         except KeyError:
             pass
 
-    period = len(indexes) / 12
+    period = len(indexes) / 10
     n = 0
     short_list_indexes = []
     short_list_dates = []
-    for xn in range(0, 12):
+    for xn in range(0, 10):
         short_list_indexes.append(n)
         short_list_dates.append(str(indexes_dates[n])[5:13])
         n += int(period)
