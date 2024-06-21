@@ -1,5 +1,4 @@
 import get_token_file
-import tinkoff_requests
 import telebot
 import os
 import data2sql
@@ -99,7 +98,7 @@ def graphs_to_telegram(figi, limit):
         case = event[1]
         direction = event[3]
         price = event[4]
-        date = str(tinkoff_requests.adapt_date4interval(event[10], 4))[:19]
+        date = str(event[10].replace(minute=0, second=0, microsecond=0))[:19]
         try:
             plt.scatter(candle_dates[date], price, color='red' if direction == 'SELL' else 'green', marker='o')
             plt.text(candle_dates[date], price, case, verticalalignment='bottom', horizontalalignment='right',
