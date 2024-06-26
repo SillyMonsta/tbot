@@ -61,12 +61,14 @@ def check_last_event(figi, direction, case, x_price, x_time):
 
 
 def check_trading_status(figi, events_extraction_case):
+    trading_status_raw = tinkoff_requests.request_trading_status(figi)
     if events_extraction_case:
         trading_status = True
-    elif tinkoff_requests.request_trading_status(figi) == 5:
+    elif trading_status_raw == 5:
         trading_status = True
     else:
         trading_status = False
+        write2file.write(str(datetime.datetime.now())[:19] + ' trading_status ' + str(trading_status_raw), 'log.txt')
     return trading_status
 
 
@@ -266,7 +268,7 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
             current_profit = (last_price - start_price) / last_price
             profit = result_analyze_events[1]
             target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
-            loss_percent = target_percent * Decimal(1.4)
+            loss_percent = target_percent * Decimal(2)
             loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
             if buy and check_trading_status(figi, events_extraction_case) and vol < req_vol \
                     and x_time.time() > datetime.time(10, 10):

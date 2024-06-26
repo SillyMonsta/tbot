@@ -226,7 +226,7 @@ def last_event_ticker_string(ticker):
 
 def start_telegram_connection():
     try:
-        write2file.write(str(datetime.datetime.now())[:19] + ' START telegram', 'log.txt')
+        #write2file.write(str(datetime.datetime.now())[:19] + ' START telegram', 'log.txt')
         bot.polling()
     except Exception as e:
         # write2file.write(str(datetime.datetime.now())[:19] +
