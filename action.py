@@ -356,18 +356,18 @@ def calculate_ave_trades(figi, ticker, x_time):
     new_sum_sell = (sum_sell + vol_sells) / 2
     new_sum_buy = (sum_buy + vol_buys) / 2
 
-    if sells > ave_sell * Decimal(3) and vol_sells > vol_buys and \
-            vol_sells > sum_sell * Decimal(3) and ave_sell > 20:
+    if sells > ave_sell * Decimal(2.5) and vol_sells > vol_buys and \
+            vol_sells > sum_sell * Decimal(2.5) and ave_sell > 20:
         data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, x_time)])
         lot_sells = 1
-    elif lot_sells == 1 and (sells < ave_sell * Decimal(2) or vol_sells < sum_sell * Decimal(2)):
+    elif lot_sells == 1 and (sells < ave_sell * Decimal(1.2) or vol_sells < sum_sell * Decimal(1.2)):
         data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, x_time)])
         lot_sells = 0
-    if buys > ave_buy * Decimal(3) and vol_sells < vol_buys and \
-            vol_buys > sum_buy * Decimal(3) and ave_buy > 20:
+    if buys > ave_buy * Decimal(2.5) and vol_sells < vol_buys and \
+            vol_buys > sum_buy * Decimal(2.5) and ave_buy > 20:
         data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, x_time)])
         lot_buys = 1
-    elif lot_buys == 1 and (buys < ave_buy * Decimal(2) or vol_buys < sum_buy * Decimal(2)):
+    elif lot_buys == 1 and (buys < ave_buy * Decimal(1.2) or vol_buys < sum_buy * Decimal(1.2)):
         data2sql.lot_trades_list2sql([(ticker, 'END_LOT_BUYS', figi, 'SELL', price, x_time)])
         lot_buys = 0
 
@@ -521,7 +521,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                     loss_percent = target_percent * Decimal(1.4)
                 # если last_price опустилась ниже loss_price то STOP_LOSS
                 if last_price <= loss_price:
-                    # обнуляем buy после стоп-лоса, исключаем, на некоторое время, актив из списка покупаемых
+                    # обнуляем buy после стоп-лоса, исключаем, актив из списка покупаемых
                     buy = 0
                     sold = check_and_trade(figi, ticker, start_price, start_direction,
                                            'SELL', last_price, 'STOP_LOSS', x_time, max_hi_hours, min_lo_hours,
@@ -596,7 +596,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                                        max_hi_hours, min_lo_hours, table_name, buy, fast_buy, sell, vol,
                                        req_vol, events_extraction_case, True)
 
-            # если торговли не было, то просто обновляем данные в таблице analyzed_shares
+            # если торговли не было (первая проверка не пройдена), то просто обновляем данные в таблице analyzed_shares
             if sold is False:
                 to_update = (profit, last_price, target_price, loss_price,
                              loss_percent, target_percent, position_hours, position_days, ticker)
