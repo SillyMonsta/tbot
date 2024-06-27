@@ -243,7 +243,7 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
             loss_percent = None
             loss_price = None
             if sell and vol and check_trading_status(figi, events_extraction_case) \
-                    and x_time.time() > datetime.time(10, 10):
+                    and x_time.time() > datetime.time(7, 10):
                 if events_extraction_case:
                     # тестовый ордер
                     order_response = [str(time.time()), 6]
@@ -271,7 +271,7 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
             loss_percent = target_percent * Decimal(2)
             loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
             if buy and check_trading_status(figi, events_extraction_case) and vol < req_vol \
-                    and x_time.time() > datetime.time(10, 10):
+                    and x_time.time() > datetime.time(7, 10):
                 dif_vol = int(req_vol - vol)
                 rub_balance = sql2data.get_rub_balance()[0][0]
                 # проверяем баланс рублей и последний ордер (чтобы не закупить лишнего)
