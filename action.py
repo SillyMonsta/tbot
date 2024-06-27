@@ -301,14 +301,14 @@ def check_and_trade(figi, ticker, start_price, start_direction, direction, last_
 
         target_price = make_multiple(last_price + last_price * target_percent, min_price_increment)
 
-        if direction == start_direction and deal is False and true_analyzed_shares:
-            to_update = (profit, last_price, target_price, loss_price,
-                         loss_percent, target_percent, position_hours, position_days, ticker)
-            data2sql.update_analyzed_shares(to_update)
-        else:
+        if deal or true_analyzed_shares is False:
             data2sql.analyzed_shares2sql([(figi, ticker, current_profit, x_time, direction, case, last_price,
                                            last_price, target_price, loss_price, loss_percent, target_percent,
                                            position_hours, position_days, buy, fast_buy, sell, vol, req_vol)])
+        elif true_analyzed_shares:
+            to_update = (profit, last_price, target_price, loss_price,
+                         loss_percent, target_percent, position_hours, position_days, ticker)
+            data2sql.update_analyzed_shares(to_update)
 
         data2sql.events_list2sql([(ticker, case, figi, direction, last_price, round(position_days, 3),
                                    round(profit, 3), deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time)])
