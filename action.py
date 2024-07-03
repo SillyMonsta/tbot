@@ -521,6 +521,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                     loss_percent = target_percent * Decimal(1.4)
                 # если last_price опустилась ниже loss_price то STOP_LOSS
                 try:
+
                     if last_price <= loss_price:
                         # обнуляем buy после стоп-лоса, исключаем, актив из списка покупаемых
                         buy = 0
@@ -533,6 +534,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                     # если цена поднялась и расстояние между loss_price и ценой стало больше, пересчитываем loss_price
                     elif (last_price - loss_price) / last_price > loss_percent:
                         loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
+
                 except Exception:
                     write2file.write(str(datetime.datetime.now())[:19] +
                                      ' ' + ticker + ' ' + str(last_price) + ' ' + str(loss_price), 'log.txt')
