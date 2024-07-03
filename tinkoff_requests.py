@@ -128,9 +128,8 @@ def request_history_candles(figi_list, history_candle_days, start_range, table_n
                         candles_list.append(one_row)
                 data2sql.history_candles2sql(table_name, candles_list)
         except InvestError as error:
-            write2file.write(
-                str(datetime.datetime.now())[:19] + ' tinkoff_requests.py --> history_candles --> InvestError: '
-                + str(error), 'log.txt')
+            exception_str = traceback.format_exc()
+            write2file.write(str(datetime.datetime.now())[:19] + '   FIGI: ' + figi + '\n' + exception_str, 'log.txt')
     return
 
 
@@ -378,8 +377,7 @@ def stream_connection(figi_list):
 
         except Exception:
             exception_str = traceback.format_exc()
-            write2file.write(str(datetime.datetime.now())[:19] +
-                             '\n' + exception_str, 'log.txt')
+            write2file.write(str(datetime.datetime.now())[:19] + '  ' + exception_str, 'log.txt')
             shares = sql2data.shares_from_sql()
             figi_list = []
             for figi_row in shares:

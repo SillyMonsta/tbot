@@ -171,7 +171,6 @@ def update_lot_trades(to_update):
     return
 
 
-
 def order_status2sql(order_id, status):
     query = f"""
         UPDATE orders SET status = {status} WHERE order_id = %s
