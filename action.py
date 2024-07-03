@@ -520,18 +520,22 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 if loss_percent is None:
                     loss_percent = target_percent * Decimal(1.4)
                 # если last_price опустилась ниже loss_price то STOP_LOSS
-                if last_price <= loss_price:
-                    # обнуляем buy после стоп-лоса, исключаем, актив из списка покупаемых
-                    buy = 0
-                    sold = check_and_trade(figi, ticker, start_price, start_direction,
-                                           'SELL', last_price, 'STOP_LOSS', x_time, max_hi_hours, min_lo_hours,
-                                           table_name, buy, fast_buy, sell, vol, req_vol, events_extraction_case, True)
-                    # если продажа STOP_LOSS состоялась обнуляем sell_strength
-                    if sold and sell_strength >= 2:
-                        sell_strength = 0
-                # если цена поднялась и расстояние между loss_price и ценой стало больше, пересчитываем loss_price
-                elif (last_price - loss_price) / last_price > loss_percent:
-                    loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
+                try:
+                    if last_price <= loss_price:
+                        # обнуляем buy после стоп-лоса, исключаем, актив из списка покупаемых
+                        buy = 0
+                        sold = check_and_trade(figi, ticker, start_price, start_direction,
+                                               'SELL', last_price, 'STOP_LOSS', x_time, max_hi_hours, min_lo_hours,
+                                               table_name, buy, fast_buy, sell, vol, req_vol, events_extraction_case, True)
+                        # если продажа STOP_LOSS состоялась обнуляем sell_strength
+                        if sold and sell_strength >= 2:
+                            sell_strength = 0
+                    # если цена поднялась и расстояние между loss_price и ценой стало больше, пересчитываем loss_price
+                    elif (last_price - loss_price) / last_price > loss_percent:
+                        loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
+                except Exception:
+                    write2file.write(str(datetime.datetime.now())[:19] +
+                                     ' ' + ticker + ' ' + str(last_price) + ' ' + str(loss_price), 'log.txt')
             # если SELL то определяем target_percent (отрицательный), loss_percent и loss_price при покупке не нужны
             else:
                 target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
