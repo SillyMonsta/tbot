@@ -313,6 +313,7 @@ def get_orders_request():
 def stream_connection(figi_list):
     write2file.write(str(datetime.datetime.now())[:19] + ' START stream_connection', 'log.txt')
 
+    write2file.write(str(figi_list), 'log.txt')
     if 'TCS00A0JPP37' in figi_list:
         write2file.write('UGLD in figi list  ' + str(len(figi_list)), 'log.txt')
 
