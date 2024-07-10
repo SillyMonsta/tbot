@@ -313,6 +313,9 @@ def get_orders_request():
 def stream_connection(figi_list):
     write2file.write(str(datetime.datetime.now())[:19] + ' START stream_connection', 'log.txt')
 
+    if 'TCS00A0JPP37' in figi_list:
+        print('UGLD in figi list', len(figi_list))
+
     def request_iterator():
         yield MarketDataRequest(
             subscribe_trades_request=SubscribeTradesRequest(
@@ -340,7 +343,7 @@ def stream_connection(figi_list):
                     # записываем сделку в таблицу
                     data2sql.trade2sql([(trade_figi, trade_direction, price, trade_quantity, trade_time)])
                     # отсчитываем 5 минут назад от последней сделки
-                    time_from = trade_time-datetime.timedelta(seconds=300)
+                    time_from = trade_time - datetime.timedelta(seconds=300)
                     # удаляем все сделки (строки из таблицы) старше 5 минут (time_from) по figi
                     sql2data.delete_old_trades(trade_figi, time_from)
                     if trade_figi == 'TCS00A0JPP37':
