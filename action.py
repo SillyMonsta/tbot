@@ -312,6 +312,7 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
         trend_far = result_analyze_events[3]
         trend_near = result_analyze_events[5]
         target_price = make_multiple(last_price + last_price * target_percent, min_price_increment)
+
         # если нет строки в analyzed_shares, или произошла сделка,
         # или сменилось направление при условии, что акция не торгуется реально(req_vol == 0 or req_vol is None)
         if true_analyzed_shares is False \
@@ -321,6 +322,7 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
             data2sql.analyzed_shares2sql([(figi, ticker, current_profit, x_time, direction, case, last_price,
                                            last_price, target_price, loss_price, loss_percent, target_percent,
                                            position_hours, position_days, buy, fast_buy, sell, vol, req_vol)])
+
         # иначе, но при условии, что есть строка в analyzed_shares
         elif true_analyzed_shares:
             # частично обновляем ячейки в строке в analyzed_shares
@@ -534,8 +536,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             if start_direction == 'BUY':
                 profit = (last_price - start_price) / last_price
                 target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
-                if loss_percent is None:
+                if loss_percent is None or loss_price is None:
                     loss_percent = target_percent * Decimal(2)
+                    loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
                 # если last_price опустилась ниже loss_price то STOP_LOSS
                 if last_price <= loss_price:
                     # обнуляем buy после стоп-лоса, исключаем, актив из списка покупаемых
@@ -554,6 +557,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             else:
                 target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
                 profit = (start_price - last_price) / start_price
+                loss_percent = None
+                loss_price = None
 
             target_price = make_multiple(start_price + start_price * target_percent, min_price_increment)
 
