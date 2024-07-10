@@ -343,7 +343,8 @@ def stream_connection(figi_list):
                     time_from = trade_time-datetime.timedelta(seconds=300)
                     # удаляем все сделки (строки из таблицы) старше 5 минут (time_from) по figi
                     sql2data.delete_old_trades(trade_figi, time_from)
-
+                    if trade_figi == 'TCS00A0JPP37':
+                        print(time_from, trade_figi, 'UGLD in stream')
                     # формируем данные для запроса sql по обновлению свечек для двух интервалов
                     for x in [4, 5]:
                         one_row = (
