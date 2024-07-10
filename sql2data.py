@@ -192,6 +192,15 @@ def shares_from_sql():
     return results
 
 
+def analyzed_shares_from_sql():
+    cursor.execute(
+        '''SELECT *
+        FROM analyzed_shares 
+        ORDER BY ticker''')
+    results = cursor.fetchall()
+    return results
+
+
 def acc_id_from_sql(acc_name):
     query = '''SELECT acc_id FROM acc_id WHERE acc_name = %s'''
     cursor.execute(query, (acc_name,))
