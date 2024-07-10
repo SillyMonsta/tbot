@@ -540,7 +540,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 if last_price <= loss_price:
                     # обнуляем buy после стоп-лоса, исключаем, актив из списка покупаемых
                     buy = 0
-                    sold = check_and_trade(figi, ticker, start_price, 'SELL', last_price,
+                    sold = check_and_trade(figi, ticker, start_price, 'SELL', start_direction, last_price,
                                            'STOP_LOSS', x_time, max_hi_hours, min_lo_hours, table_name, buy,
                                            fast_buy, sell, vol, req_vol, events_extraction_case, True)
                     # если продажа STOP_LOSS состоялась обнуляем sell_strength
