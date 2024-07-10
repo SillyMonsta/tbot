@@ -532,6 +532,10 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             # вычисляем среднее кол-во сделок за промежуток, проверяем текущее кол-во сделок за промежуток
             calculate_ave_trades(figi, ticker, x_time)
 
+            if ticker == 'UGLD':
+                write2file.write(str(datetime.datetime.now())[:19] + 'UGLD loss_percent ' +
+                                 str(loss_percent) + '   loss_price ' + str(loss_price), 'log.txt')
+
             # если start_direction BUY то определяем target_percent, loss_percent и loss_price
             if start_direction == 'BUY':
                 profit = (last_price - start_price) / last_price
@@ -539,6 +543,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 if loss_percent is None or loss_price is None:
                     loss_percent = target_percent * Decimal(2)
                     loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
+                    if ticker == 'UGLD':
+                        write2file.write(str(datetime.datetime.now())[:19] + 'UGLD loss_percent ' +
+                                         str(loss_percent) + '   loss_price ' + str(loss_price), 'log.txt')
                 # если last_price опустилась ниже loss_price то STOP_LOSS
                 if last_price <= loss_price:
                     # обнуляем buy после стоп-лоса, исключаем, актив из списка покупаемых
@@ -619,6 +626,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
             # если торговли не было (первая проверка не пройдена), то просто обновляем данные в таблице analyzed_shares
             if sold is False:
+                if ticker == 'UGLD':
+                    write2file.write(str(datetime.datetime.now())[:19] + 'UGLD loss_percent ' +
+                                     str(loss_percent) + '   loss_price ' + str(loss_price), 'log.txt')
                 to_update = (profit, last_price, target_price, loss_price,
                              loss_percent, target_percent, position_hours, position_days, ticker)
                 data2sql.update_analyzed_shares(to_update)
