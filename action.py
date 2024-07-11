@@ -175,6 +175,7 @@ def check_orders(ticker):
                     data2sql.balance2sql('balance', [('rub', rub_balance + price * quantity)])
                 else:
                     tinkoff_requests.request_balance()
+                    data2sql.update_analyzed_shares_column(ticker, 'vol', quantity)
         # Обновляем статус ордера в таблице orders
         data2sql.order_status2sql(order_id, new_order_status)
     return
@@ -307,6 +308,7 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
                         else:
                             if status == 1:
                                 tinkoff_requests.request_balance()
+                                data2sql.update_analyzed_shares_column(ticker, 'vol', vol + dif_vol)
 
         deal_qnt = result_analyze_events[2]
         trend_far = result_analyze_events[3]

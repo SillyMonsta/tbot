@@ -313,9 +313,6 @@ def get_orders_request():
 def stream_connection(figi_list):
     write2file.write(str(datetime.datetime.now())[:19] + ' START stream_connection', 'log.txt')
 
-    if 'TCS00A0JPP37' in figi_list:
-        write2file.write('UGLD in figi list  ' + str(len(figi_list)), 'log.txt')
-
     def request_iterator():
         yield MarketDataRequest(
             subscribe_trades_request=SubscribeTradesRequest(
@@ -346,8 +343,6 @@ def stream_connection(figi_list):
                     time_from = trade_time - datetime.timedelta(seconds=300)
                     # удаляем все сделки (строки из таблицы) старше 5 минут (time_from) по figi
                     sql2data.delete_old_trades(trade_figi, time_from)
-                    if trade_figi == 'TCS00A0JPP37':
-                        print(time_from, trade_figi, 'UGLD in stream')
                     # формируем данные для запроса sql по обновлению свечек для двух интервалов
                     for x in [4, 5]:
                         one_row = (
