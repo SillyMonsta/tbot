@@ -337,12 +337,16 @@ def stream_connection(figi_list):
                         trade_direction = ''
                     trade_figi = marketdata.trade.figi
                     trade_quantity = marketdata.trade.quantity
-                    # записываем сделку в таблицу
-                    data2sql.trade2sql([(trade_figi, trade_direction, price, trade_quantity, trade_time)])
+
+                    # записываем сделку в таблицу для последующего вычисления сколько было сделок за короткий период
+                    # data2sql.trade2sql([(trade_figi, trade_direction, price, trade_quantity, trade_time)])
+
                     # отсчитываем 5 минут назад от последней сделки
                     time_from = trade_time - datetime.timedelta(seconds=300)
-                    # удаляем все сделки (строки из таблицы) старше 5 минут (time_from) по figi
-                    sql2data.delete_old_trades(trade_figi, time_from)
+
+                    # удаляем все сделки (строки из таблицы) старше 5 минут (time_from) по figi (сделки за период)
+                    # sql2data.delete_old_trades(trade_figi, time_from)
+
                     # формируем данные для запроса sql по обновлению свечек для двух интервалов
                     for x in [4, 5]:
                         one_row = (
