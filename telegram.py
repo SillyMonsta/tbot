@@ -84,17 +84,17 @@ def graphs_to_telegram(figi, limit):
     plt.bar(down.index, down.high - down.open, width2, bottom=down.open, color=col2)
     plt.bar(down.index, down.low - down.close, width2, bottom=down.close, color=col2)
 
-    for trade in list_lot_trades_from_date:
-        case = trade[1]
-        direction = trade[3]
-        price = trade[4]
-        date = str(trade[5].replace(minute=0, second=0, microsecond=0))[:19]
-        try:
-            plt.scatter(dates_indexes[date], price, color='red' if direction == 'SELL' else 'green', marker='o')
-            plt.text(dates_indexes[date], price, case, verticalalignment='bottom', horizontalalignment='right',
-                     fontsize=5)
-        except KeyError:
-            pass
+    #for trade in list_lot_trades_from_date:
+    #    case = trade[1]
+    #    direction = trade[3]
+    #    price = trade[4]
+    #    date = str(trade[5].replace(minute=0, second=0, microsecond=0))[:19]
+    #    try:
+    #        plt.scatter(dates_indexes[date], price, color='red' if direction == 'SELL' else 'green', marker='o')
+    #        plt.text(dates_indexes[date], price, case, verticalalignment='bottom', horizontalalignment='right',
+    #                 fontsize=5)
+    #    except KeyError:
+    #        pass
 
     for event in list_events_from_date:
         case = event[1]
