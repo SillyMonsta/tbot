@@ -398,7 +398,7 @@ def calculate_ave_trades(figi, ticker, x_time):
     return
 
 
-def analyse_ohlcv(ohlcv, figi):
+def analyse_ohlcv(ohlcv):
     sell_strength = 0
     buy_strength = 0
     sell_case = ''
@@ -418,11 +418,7 @@ def analyse_ohlcv(ohlcv, figi):
     prev_roc = roc[len(roc) - 2]
     last_roc = roc[len(roc) - 1]
 
-    try:
-        roc_level_u = min(sorted([x for x in roc.tolist()[:-1] if not numpy.isnan(x)], reverse=True)[:3])
-    except Exception:
-        write2file.write(str(datetime.datetime.now())[:19] + '  ' + figi, 'log.txt')
-        roc_level_u = 0
+    roc_level_u = min(sorted([x for x in roc.tolist()[:-1] if not numpy.isnan(x)], reverse=True)[:3])
     roc_level_l = max(sorted([x for x in roc.tolist()[:-1] if not numpy.isnan(x)], reverse=False)[:3])
 
     if last_pb > 1:
@@ -489,6 +485,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 vo[-1] = float(new_candle[3])
 
         last_price = candles[-1][3]
+
         try:
             dict_ohlcv = {
                 'open': op,
@@ -499,9 +496,9 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
             }
             ohlcv = pd.DataFrame(data=dict_ohlcv)
 
-            strength_case = analyse_ohlcv(ohlcv, figi)
+            strength_case = analyse_ohlcv(ohlcv)
         except Exception:
-            write2file.write(str(datetime.datetime.now())[:19] + '  ' + figi, 'log.txt')
+            write2file.write(str(datetime.datetime.now())[:19] + ' ошибка при создании ohlcv ' + figi, 'log.txt')
             return
 
         sell_strength = strength_case[0]
