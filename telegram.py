@@ -260,13 +260,15 @@ def trade_manual(ticker, direction, vol):
             now_vol = prev_vol - vol
         else:
             now_vol = prev_vol + vol
+
         data2sql.analyzed_shares2sql([(figi, ticker, 0, x_time, direction, case, price, price, 0, None, None, 0,
                                        position_hours, position_days, buy, fast_buy, sell, now_vol, req_vol)])
 
         return_data = last_orders_string(1)
 
     else:
-        return_data = 'order_id  ' + str(order_id) + '\norder_status  ' + str(status)
+        log_line = readlog('log.txt', 1)
+        return_data = 'order place error:\norder_id: ' + str(order_id) + ' order_status: ' + str(status) + '\n' + log_line
 
     return return_data
 
