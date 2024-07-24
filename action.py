@@ -489,17 +489,20 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 vo[-1] = float(new_candle[3])
 
         last_price = candles[-1][3]
+        try:
+            dict_ohlcv = {
+                'open': op,
+                'high': hi,
+                'low': lo,
+                'close': cl,
+                'volume': vo
+            }
+            ohlcv = pd.DataFrame(data=dict_ohlcv)
 
-        dict_ohlcv = {
-            'open': op,
-            'high': hi,
-            'low': lo,
-            'close': cl,
-            'volume': vo
-        }
-        ohlcv = pd.DataFrame(data=dict_ohlcv)
-
-        strength_case = analyse_ohlcv(ohlcv, figi)
+            strength_case = analyse_ohlcv(ohlcv, figi)
+        except Exception:
+            write2file.write(str(datetime.datetime.now())[:19] + '  ' + figi, 'log.txt')
+            return
 
         sell_strength = strength_case[0]
         buy_strength = strength_case[1]
