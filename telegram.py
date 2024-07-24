@@ -1,4 +1,5 @@
 import get_token_file
+import tinkoff_requests
 import telebot
 import os
 import data2sql
@@ -6,6 +7,7 @@ import write2file
 import datetime
 import sql2data
 import time
+from decimal import Decimal
 from tinkoff.invest.utils import now
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -26,6 +28,12 @@ def readlog(name, num_lines):
     for line in lines:
         message = message + '\n' + line
     return message
+
+
+def make_multiple(num, divisor):
+    result = (num // divisor) * divisor
+    decimals = len(str(divisor).split('.')[1]) if '.' in str(divisor) else 0
+    return Decimal(round(result, decimals))
 
 
 def graphs_to_telegram(figi, limit):
@@ -84,7 +92,7 @@ def graphs_to_telegram(figi, limit):
     plt.bar(down.index, down.high - down.open, width2, bottom=down.open, color=col2)
     plt.bar(down.index, down.low - down.close, width2, bottom=down.close, color=col2)
 
-    #for trade in list_lot_trades_from_date:
+    # for trade in list_lot_trades_from_date:
     #    case = trade[1]
     #    direction = trade[3]
     #    price = trade[4]
@@ -224,9 +232,48 @@ def last_event_ticker_string(ticker):
     return event_string
 
 
+def trade_manual(ticker, direction, vol):
+    x_time = now()
+    case = 'MANUAL'
+    lot = sql2data.get_info_by_ticker('shares', 'lot', ticker)[0][0]
+
+    analyzed_share = sql2data.analyzed_share_by_ticker(ticker)
+
+    figi = analyzed_share[0][0]
+    price = analyzed_share[0][7]
+    position_hours = analyzed_share[0][12]
+    position_days = analyzed_share[0][13]
+    buy = analyzed_share[0][14]
+    fast_buy = analyzed_share[0][15]
+    sell = analyzed_share[0][16]
+    prev_vol = analyzed_share[0][17]
+    req_vol = analyzed_share[0][18]
+
+    order_response = tinkoff_requests.market_order(figi, direction, int(vol / lot))
+
+    order_id = order_response[0]
+    status = order_response[1]
+
+    if order_id and status:
+        data2sql.order2sql([(order_id, status, ticker, direction, case, price, vol, x_time)])
+        if direction == 'SELL':
+            now_vol = prev_vol - vol
+        else:
+            now_vol = prev_vol + vol
+        data2sql.analyzed_shares2sql([(figi, ticker, 0, x_time, direction, case, price, price, 0, None, None, 0,
+                                       position_hours, position_days, buy, fast_buy, sell, now_vol, req_vol)])
+
+        return_data = last_orders_string(1)
+
+    else:
+        return_data = 'order_id  ' + str(order_id) + '\norder_status  ' + str(status)
+
+    return return_data
+
+
 def start_telegram_connection():
     try:
-        #write2file.write(str(datetime.datetime.now())[:19] + ' START telegram', 'log.txt')
+        # write2file.write(str(datetime.datetime.now())[:19] + ' START telegram', 'log.txt')
         bot.polling()
     except Exception as e:
         # write2file.write(str(datetime.datetime.now())[:19] +
@@ -252,10 +299,12 @@ def handle_message(message):
                  '\n\n4.Получить последние строки из orders:\norders [row_count]' \
                  '\n\n5.Получить последние строки из log.txt:\nlog [num_lines]' \
                  '\n\n6.Получить из events_list последний event по акции:\nlast-event [ticker]' \
-                 '\n\n7.Получить график свечей по акции, и за количество часов:\ngraph [ticker] [limit]'
+                 '\n\n7.Получить график свечей по акции, и за количество часов:\ngraph [ticker] [limit]' \
+                 '\n\n8.Торговля в ручном режиме:\nBUY/SELL [ticker] [vol]'
         feedback = notice
         try:
-            if user_message.split(' ')[0] == 'update':
+            command = user_message.split(' ')[0]
+            if command == 'update':
                 ticker = user_message.split(' ')[1]
                 buy = user_message.split(' ')[2]
                 fast_buy = user_message.split(' ')[3]
@@ -271,7 +320,7 @@ def handle_message(message):
                     data2sql.update_analyzed_shares_from_telegram(buy, fast_buy, sell, vol, req_vol, ticker)
                     feedback = analyzed_share_string(ticker)
 
-            if user_message.split(' ')[0] == 'get':
+            if command == 'get':
                 ticker = user_message.split(' ')[1]
                 tickers = sql2data.analyzed_share_tickers_list()
                 if (ticker,) not in tickers:
@@ -279,32 +328,32 @@ def handle_message(message):
                 else:
                     feedback = analyzed_share_string(ticker)
 
-            if user_message.split(' ')[0] == 'events':
+            if command == 'events':
                 row_count = user_message.split(' ')[1]
                 if not row_count.isdigit():
                     feedback = 'Ошибка ввода. row_count целое число (INT)'
                 else:
                     feedback = last_events_string(int(row_count))
 
-            if user_message.split(' ')[0] == 'orders':
+            if command == 'orders':
                 row_count = user_message.split(' ')[1]
                 if not row_count.isdigit():
                     feedback = 'Ошибка ввода. row_count целое число (INT)'
                 else:
                     feedback = last_orders_string(int(row_count))
 
-            if user_message.split(' ')[0] == 'last-event':
+            if command == 'last-event':
                 ticker = user_message.split(' ')[1]
                 feedback = last_event_ticker_string(ticker)
 
-            if user_message.split(' ')[0] == 'log':
+            if command == 'log':
                 num_lines = user_message.split(' ')[1]
                 if not num_lines.isdigit():
                     feedback = 'Ошибка ввода. num_lines целое число (INT)'
                 else:
                     feedback = readlog('log.txt', num_lines)
 
-            if user_message.split(' ')[0] == 'graph':
+            if command == 'graph':
                 ticker = user_message.split(' ')[1]
                 tickers = sql2data.analyzed_share_tickers_list()
                 limit = user_message.split(' ')[2]
@@ -314,6 +363,17 @@ def handle_message(message):
                     figi = sql2data.get_info_by_ticker('shares', 'figi', ticker)[0][0]
                     graphs_to_telegram(figi, int(limit))
                     feedback = analyzed_share_string(ticker)
+
+            if command == 'BUY' or command == 'SELL':
+                ticker = user_message.split(' ')[1]
+                tickers = sql2data.analyzed_share_tickers_list()
+                vol = user_message.split(' ')[2]
+                if not vol.isdigit():
+                    feedback = 'Ошибка ввода. [vol] - целое число (INT)\nBUY/SELL [ticker] [vol]'
+                elif (ticker,) not in tickers:
+                    feedback = 'Ошибка ввода. Нет [ticker] в таблице analyzed_share\nBUY/SELL [ticker] [vol]'
+                else:
+                    feedback = trade_manual(ticker, command, int(vol))
 
         except Exception:
             feedback = notice

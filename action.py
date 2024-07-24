@@ -271,9 +271,8 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
                         data2sql.balance2sql('balance', [('rub', rub_balance + last_price * vol)])
                     else:
                         if status == 1:
-                            rub_balance = sql2data.get_rub_balance()[0][0]
-                            data2sql.update_analyzed_shares_column(ticker, 'vol', 0)
-                            data2sql.balance2sql('balance', [('rub', rub_balance + last_price * vol)])
+                            tinkoff_requests.request_balance()
+                            vol = 0
 
         else:
             current_profit = (last_price - start_price) / last_price
@@ -308,7 +307,7 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
                         else:
                             if status == 1:
                                 tinkoff_requests.request_balance()
-                                data2sql.update_analyzed_shares_column(ticker, 'vol', vol + dif_vol)
+                                vol = vol + dif_vol
 
         deal_qnt = result_analyze_events[2]
         trend_far = result_analyze_events[3]
@@ -498,6 +497,8 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
             strength_case = analyse_ohlcv(ohlcv)
         except Exception:
+            ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
+            write2file.write(str(datetime.datetime.now())[:19] + ' ошибка при создании ohlcv ' + ticker, 'log.txt')
             return
 
         sell_strength = strength_case[0]
