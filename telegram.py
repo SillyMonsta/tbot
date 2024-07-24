@@ -260,7 +260,8 @@ def trade_manual(ticker, direction, vol):
             now_vol = prev_vol - vol
         else:
             now_vol = prev_vol + vol
-
+        if now_vol > req_vol:
+            req_vol = now_vol
         data2sql.analyzed_shares2sql([(figi, ticker, 0, x_time, direction, case, price, price, 0, None, None, 0,
                                        position_hours, position_days, buy, fast_buy, sell, now_vol, req_vol)])
 
