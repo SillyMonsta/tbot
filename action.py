@@ -487,7 +487,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
         last_price = candles[-1][3]
 
         try:
-            write2file.write(str(datetime.datetime.now())[:19] + ' normal ' + figi, 'log.txt')
             dict_ohlcv = {
                 'open': op,
                 'high': hi,
@@ -499,7 +498,6 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
             strength_case = analyse_ohlcv(ohlcv)
         except Exception:
-            write2file.write(str(datetime.datetime.now())[:19] + ' ошибка при создании ohlcv ' + figi, 'log.txt')
             return
 
         sell_strength = strength_case[0]
