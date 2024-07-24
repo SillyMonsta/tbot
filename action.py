@@ -487,6 +487,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
         last_price = candles[-1][3]
 
         try:
+            write2file.write(str(datetime.datetime.now())[:19] + ' normal ' + figi, 'log.txt')
             dict_ohlcv = {
                 'open': op,
                 'high': hi,
