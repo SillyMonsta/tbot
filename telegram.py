@@ -240,6 +240,7 @@ def trade_manual(ticker, direction, vol):
     analyzed_share = sql2data.analyzed_share_by_ticker(ticker)
 
     figi = analyzed_share[0][0]
+    profit = analyzed_share[0][2]
     price = analyzed_share[0][7]
     position_hours = analyzed_share[0][12]
     position_days = analyzed_share[0][13]
@@ -262,8 +263,12 @@ def trade_manual(ticker, direction, vol):
             now_vol = prev_vol + vol
         if now_vol > req_vol:
             req_vol = now_vol
+
         data2sql.analyzed_shares2sql([(figi, ticker, 0, x_time, direction, case, price, price, 0, None, None, 0,
                                        position_hours, position_days, buy, fast_buy, sell, now_vol, req_vol)])
+
+        data2sql.events_list2sql([(ticker, case, figi, direction, price, round(position_days, 3),
+                                   round(profit, 3), 0, 0, 0, x_time)])
 
         return_data = last_orders_string(1)
 
