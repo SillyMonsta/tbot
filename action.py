@@ -422,7 +422,7 @@ def analyse_ohlcv(ohlcv, figi):
         roc_level_u = min(sorted([x for x in roc.tolist()[:-1] if not numpy.isnan(x)], reverse=True)[:3])
     except Exception:
         write2file.write(str(datetime.datetime.now())[:19] + '  ' + figi, 'log.txt')
-        roc_level_u=0
+        roc_level_u = 0
     roc_level_l = max(sorted([x for x in roc.tolist()[:-1] if not numpy.isnan(x)], reverse=False)[:3])
 
     if last_pb > 1:
