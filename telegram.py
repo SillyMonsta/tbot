@@ -14,6 +14,7 @@ import pandas as pd
 from io import BytesIO
 
 bot_token = get_token_file.get_token('telegram_bot_token.txt').split()[0]
+valid_id = get_token_file.get_token('telegram_bot_token.txt').split()[1]
 
 bot = telebot.TeleBot(bot_token)
 
@@ -313,7 +314,7 @@ def handle_message(message):
     user_message = message.text
     user_id = message.from_user.id
     # если сообщения от нужного пользователя
-    if user_id == 1138331624:
+    if user_id == int(valid_id):
         notice = 'Ошибка ввода.\nДоступные команды:' \
                  '\n\n1.Переписать значения в analyzed_shares:\nupdate [ticker] [buy] [fast_buy] [sell] [vol] [req_vol]' \
                  '\n(указывать количество акций, не лотов!)' \
