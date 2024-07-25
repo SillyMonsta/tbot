@@ -279,6 +279,21 @@ def trade_manual(ticker, direction, vol):
     return return_data
 
 
+def active_list():
+    analyzed_shares = sql2data.analyzed_share_total()
+    str_vol = ''
+    str_req_vol = ''
+    for share in analyzed_shares:
+        ticker = share[1]
+        vol = share[17]
+        req_vol = share[18]
+        if req_vol and (vol is None or vol == 0):
+            str_req_vol = str_req_vol + ticker + ' ' + str(vol) + ' ' + str(req_vol) + '\n'
+        if vol:
+            str_vol = str_vol + ticker + ' ' + str(vol) + ' ' + str(req_vol) + '\n'
+    return str_vol + str_req_vol
+
+
 def start_telegram_connection():
     try:
         # write2file.write(str(datetime.datetime.now())[:19] + ' START telegram', 'log.txt')
@@ -308,7 +323,8 @@ def handle_message(message):
                  '\n\n5.Получить последние строки из log.txt:\nlog [num_lines]' \
                  '\n\n6.Получить из events_list последний event по акции:\nlast-event [ticker]' \
                  '\n\n7.Получить график свечей по акции, и за количество часов:\ngraph [ticker] [limit]' \
-                 '\n\n8.Торговля в ручном режиме:\nBUY/SELL [ticker] [vol]'
+                 '\n\n8.Торговля в ручном режиме:\nBUY/SELL [ticker] [vol]' \
+                 '\n\n9.Получить список акций находящихся в активе:\nactive'
         feedback = notice
         try:
             command = user_message.split(' ')[0]
@@ -382,6 +398,9 @@ def handle_message(message):
                     feedback = 'Ошибка ввода. Нет [ticker] в таблице analyzed_share\nBUY/SELL [ticker] [vol]'
                 else:
                     feedback = trade_manual(ticker, command, int(vol))
+
+            if command == 'active':
+                feedback = active_list()
 
         except Exception:
             feedback = notice

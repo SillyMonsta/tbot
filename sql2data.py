@@ -383,6 +383,13 @@ def analyzed_share_tickers_list():
     return results
 
 
+def analyzed_share_total():
+    query = '''SELECT * FROM analyzed_shares'''
+    cursor.execute(query)
+    results = cursor.fetchall()
+    return results
+
+
 def get_sorted_list_by_figi(table_name, column_name_1, column_name_2, column_name_3, figi, time_from):
     query = f'''
             SELECT {column_name_1}, {column_name_2}, {column_name_3} 
