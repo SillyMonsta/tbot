@@ -308,6 +308,8 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
                             if status == 1:
                                 tinkoff_requests.request_balance()
                                 vol = vol + dif_vol
+                                if vol > req_vol:
+                                    req_vol = vol
 
         deal_qnt = result_analyze_events[2]
         trend_far = result_analyze_events[3]
@@ -315,7 +317,7 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
         target_price = make_multiple(last_price + last_price * target_percent, min_price_increment)
 
         # если нет строки в analyzed_shares, или произошла сделка,
-        # или сменилось направление при условии, что акция не торгуется реально(req_vol == 0 or req_vol is None)
+        # или если сменилось направление при условии что акция не торгуется реально(req_vol == 0 or req_vol is None)
         if true_analyzed_shares is False \
                 or deal \
                 or (start_direction != direction and (req_vol == 0 or req_vol is None)):
@@ -331,6 +333,7 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
                          loss_percent, target_percent, position_hours, position_days, ticker)
             data2sql.update_analyzed_shares(to_update)
 
+        # так или иначе добавляем случай в event_list
         data2sql.events_list2sql([(ticker, case, figi, direction, last_price, round(position_days, 3),
                                    round(profit, 3), deal_qnt, round(trend_near, 3), round(trend_far, 3), x_time)])
         trade = True
