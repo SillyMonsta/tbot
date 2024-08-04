@@ -329,24 +329,8 @@ def stream_connection(figi_list):
                 if marketdata.trade:
                     price = units_nano_merge(marketdata.trade.price.units, marketdata.trade.price.nano)
                     trade_time = marketdata.trade.time
-                    if marketdata.trade.direction == 1:
-                        trade_direction = 'BUY'
-                    elif marketdata.trade.direction == 2:
-                        trade_direction = 'SELL'
-                    else:
-                        trade_direction = ''
                     trade_figi = marketdata.trade.figi
                     trade_quantity = marketdata.trade.quantity
-
-                    # записываем сделку в таблицу для последующего вычисления сколько было сделок за короткий период
-                    # data2sql.trade2sql([(trade_figi, trade_direction, price, trade_quantity, trade_time)])
-
-                    # отсчитываем 5 минут назад от последней сделки
-                    time_from = trade_time - datetime.timedelta(seconds=300)
-
-                    # удаляем все сделки (строки из таблицы) старше 5 минут (time_from) по figi (сделки за период)
-                    # sql2data.delete_old_trades(trade_figi, time_from)
-
                     # формируем данные для запроса sql по обновлению свечек для двух интервалов
                     for x in [4, 5]:
                         one_row = (
@@ -377,9 +361,8 @@ def stream_connection(figi_list):
                         # обнуляем время и список для начала нового периода
                         xtime = now()
                         trades2candles_list = []
-
         except Exception:
-            exception_str = traceback.format_exc()
+            exception_str = 'stream_connection ERROR'  # traceback.format_exc()
             write2file.write(str(datetime.datetime.now())[:19] + '  ' + exception_str, 'log.txt')
             shares = sql2data.shares_from_sql()
             figi_list = []
