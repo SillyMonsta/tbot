@@ -246,7 +246,7 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
         if direction == 'SELL':
             current_profit = (start_price - last_price) / start_price
             profit = result_analyze_events[0]
-            target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
+            target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.85)
 
             loss_percent = None
             loss_price = None
@@ -277,9 +277,9 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
         else:
             current_profit = (last_price - start_price) / last_price
             profit = result_analyze_events[1]
-            target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
+            target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.85)
 
-            loss_percent = target_percent * Decimal(2)
+            loss_percent = target_percent * Decimal(1.8)
             loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
 
             if buy and check_trading_status(figi, events_extraction_case) and vol < req_vol \
@@ -341,63 +341,6 @@ def check_and_trade(figi, ticker, start_price, direction, start_direction, last_
         trade = False
 
     return trade
-
-
-def calculate_ave_trades(figi, ticker, x_time):
-    trades_for_period = sql2data.get_trades(figi)
-    price = trades_for_period[0][2]
-    sells = 0
-    vol_sells = 0
-    buys = 0
-    vol_buys = 0
-    for trade in trades_for_period:
-        direction = trade[1]
-        quantity = trade[3]
-        if direction == 'SELL':
-            sells += 1
-            vol_sells = vol_sells + quantity
-        elif direction == 'BUY':
-            buys += 1
-            vol_buys = vol_buys + quantity
-
-    ave_trade = sql2data.get_ave_trades(figi)
-    if ave_trade:
-        ave_sell = ave_trade[0][2]
-        ave_buy = ave_trade[0][3]
-        sum_sell = ave_trade[0][4]
-        sum_buy = ave_trade[0][5]
-        lot_sells = ave_trade[0][6]
-        lot_buys = ave_trade[0][7]
-    else:
-        ave_sell = 0
-        ave_buy = 0
-        sum_sell = vol_sells
-        sum_buy = vol_buys
-        lot_sells = 0
-        lot_buys = 0
-    new_ave_sell = (ave_sell + sells) / 2
-    new_ave_buy = (ave_buy + buys) / 2
-    new_sum_sell = (sum_sell + vol_sells) / 2
-    new_sum_buy = (sum_buy + vol_buys) / 2
-
-    if sells > ave_sell * Decimal(3) and vol_sells > vol_buys and \
-            vol_sells > sum_sell * Decimal(3) and ave_sell > 20:
-        data2sql.lot_trades_list2sql([(ticker, 'LOT_SELLS', figi, 'SELL', price, x_time)])
-        lot_sells = 1
-    elif lot_sells == 1 and (sells < ave_sell * Decimal(1.2) or vol_sells < sum_sell * Decimal(1.2)):
-        data2sql.lot_trades_list2sql([(ticker, 'END_LOT_SELLS', figi, 'BUY', price, x_time)])
-        lot_sells = 0
-    if buys > ave_buy * Decimal(3) and vol_sells < vol_buys and \
-            vol_buys > sum_buy * Decimal(3) and ave_buy > 20:
-        data2sql.lot_trades_list2sql([(ticker, 'LOT_BUYS', figi, 'BUY', price, x_time)])
-        lot_buys = 1
-    elif lot_buys == 1 and (buys < ave_buy * Decimal(1.2) or vol_buys < sum_buy * Decimal(1.2)):
-        data2sql.lot_trades_list2sql([(ticker, 'END_LOT_BUYS', figi, 'SELL', price, x_time)])
-        lot_buys = 0
-
-    data2sql.ave_trades2sql([(figi, ticker, new_ave_sell, new_ave_buy, new_sum_sell, new_sum_buy, lot_sells, lot_buys)])
-
-    return
 
 
 def analyse_ohlcv(ohlcv):
@@ -488,21 +431,16 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
         last_price = candles[-1][3]
 
-        try:
-            dict_ohlcv = {
+        dict_ohlcv = {
                 'open': op,
                 'high': hi,
                 'low': lo,
                 'close': cl,
                 'volume': vo
             }
-            ohlcv = pd.DataFrame(data=dict_ohlcv)
+        ohlcv = pd.DataFrame(data=dict_ohlcv)
 
-            strength_case = analyse_ohlcv(ohlcv)
-        except Exception:
-            ticker = sql2data.get_info_by_figi('shares', 'ticker', figi)[0][0]
-            write2file.write(str(datetime.datetime.now())[:19] + ' ошибка при создании ohlcv ' + ticker, 'log.txt')
-            return
+        strength_case = analyse_ohlcv(ohlcv)
 
         sell_strength = strength_case[0]
         buy_strength = strength_case[1]
@@ -538,15 +476,12 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                              (min_lo_hours / (max_hi_hours - min_lo_hours))
             position_days = get_price_position(figi, table_name)
 
-            # вычисляем среднее кол-во сделок за промежуток, проверяем текущее кол-во сделок за промежуток
-            # calculate_ave_trades(figi, ticker, x_time)
-
             # если start_direction BUY то определяем target_percent, loss_percent и loss_price
             if start_direction == 'BUY':
                 profit = (last_price - start_price) / last_price
-                target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
+                target_percent = ((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.85)
                 if loss_percent is None or loss_price is None:
-                    loss_percent = target_percent * Decimal(2)
+                    loss_percent = target_percent * Decimal(1.8)
                     loss_price = make_multiple(last_price - last_price * loss_percent, min_price_increment)
                 # если last_price опустилась ниже loss_price то STOP_LOSS
                 if last_price <= loss_price:
@@ -564,7 +499,7 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
 
             # если SELL то определяем target_percent (отрицательный), loss_percent и loss_price при покупке не нужны
             else:
-                target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.7)
+                target_percent = -((max_hi_hours - min_lo_hours) / max_hi_hours) * Decimal(0.85)
                 profit = (start_price - last_price) / start_price
                 loss_percent = None
                 loss_price = None
@@ -581,14 +516,14 @@ def analyze_candles(figi, events_extraction_case, x_time, table_name):
                 buy_strength += 1
 
             # если рост на масштабе дней развернулся и цена превысила target
-            if prev_position_days == 1 and sell_case.split(' ')[-1] == 'target<':
+            if prev_position_days == 1:
                 if position_days < Decimal(0.98):
                     sell_strength += 1
                     sell_case = sell_case + ' days_rvrs'
                 else:
                     position_days = Decimal(1)
             # если падение на масштабе дней развернулось и цена опустилась ниже target
-            if prev_position_days == 0 and buy_case.split(' ')[-1] == 'target>':
+            if prev_position_days == 0:
                 if position_days > Decimal(0.02):
                     buy_strength += 1
                     buy_case = buy_case + ' days_rvrs'
